@@ -1,0 +1,75 @@
+@charset "UTF-8";
+/* CSS Document */
+table {  
+    width: 100%;
+}
+th {
+  background: #d9d9d9; 
+  font-weight: bold;
+}
+tr:nth-child(even)
+{
+    background: #f0f0f0;
+}
+/* Delete columntoggle button */
+.ui-table-columntoggle-btn 
+{ 
+	display: none;
+}
+
+
+.boxouter {
+	position:relative;
+	margin-bottom:16px;
+	padding:10px;
+	width:214px;
+	background-color:#CAD6EB;
+	border-radius:5px;
+	-webkit-border-radius:5px;
+	-moz-border-radius:5px;
+}
+
+.colleft {
+	position: absolute; /* required to make sure positioning works*/
+	left: 25%;
+	top: 60px;
+}
+
+.boxstate {
+	position:absolute;	/* absolute to next higher parent with a position statement that is non-static*/
+	top:3px;
+	width:110px;
+	color:#FFF;
+	margin-top:3px;
+	margin-bottom:3px;
+	text-align:center;
+	padding:4px;
+	margin-left:100px;
+	background-color:#48b;
+	border-radius:5px;
+	-webkit-border-radius:5px;
+	-moz-border-radius:5px;
+}
+
+/* use this to get floating div over all pages	*/
+.all_load {
+	width:200px;
+	height:auto;
+	top:12%;
+	left:50%;
+	padding:60px;
+	position:absolute;
+	margin-left:-160px; /* minus half width minus padding */
+	margin-top:0px;	/* minus half height minus padding (assumed zero height here)*/
+	text-align:center;
+	background-color:#bbb;
+	border-radius:5px;	
+	-webkit-border-radius:5px;
+	-moz-border-radius:5px;
+	filter: alpha(opacity=85);
+	opacity:0.85;
+	-webkit-opacity:0.85;
+	-moz-opacity:0.85;
+	z-index:999;
+/*	visibility:hidden	*/
+}

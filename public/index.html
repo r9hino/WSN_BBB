@@ -1,0 +1,42 @@
+<!DOCTYPE html> 
+<html>
+<head>
+    <meta charset="UTF-8">
+	<!--Fit page width to mobile devices-->
+	<!--<meta name="viewport" content="initial-scale=1, maximum-scale=1">-->
+	<meta name="viewport" content="width=device-width, initial-scale=0.7, minimum-scale=0.7, maximum-scale=1">
+	
+	<title>Pipo BBB</title>
+	
+    <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jquerymobile/1.4.3/jquery.mobile.min.css" />
+	<link rel="stylesheet" href="styleWSN.css" type="text/css" >
+	
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" type="text/javascript"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquerymobile/1.4.3/jquery.mobile.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="clientWSN.js"></script>
+</head> 
+ 
+<body>
+    <div data-role="page" id="page">
+	    <div data-role="header">
+		    <h1>Pipo BBB</h1>
+	    </div>
+
+	    <div data-role="main" class="ui-content">
+	        <div data-role="controlgroup" data-type="horizontal">
+                <input type="button" id="onButton" value="on" onClick="ledOn();">
+                <input type="button" id="offButton" value="off" onClick="ledOff();">
+            </div>
+            
+	        <div id="control_panel">
+            </div>
+	    </div>
+	    
+	    <div data-role="footer" data-position="fixed">
+		    <h1>BeagleBone Black WSN</h1>
+	    </div>
+    </div>
+</body>
+
+</html>
