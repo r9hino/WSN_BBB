@@ -11,11 +11,11 @@ socket.on('ledstatus', function (data) {
 });
         
 function ledOn(){
-    socket.emit('digitalWrite', '{"pin":"P8_10", "value":1}');
+    socket.emit('digitalWrite', '{"id":"PB0", "value":1}');
 }
 
 function ledOff(){
-    socket.emit('digitalWrite', '{"pin":"P8_10", "value":0}');
+    socket.emit('digitalWrite', '{"id":"PB0", "value":0}');
 }
 
 $(document).ready(function(e){});
