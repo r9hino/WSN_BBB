@@ -11,12 +11,14 @@ var bbb = require('bonescript');
 
 app.use(express.static(__dirname + '/public'));
 
+// This json will be loaded only if there doesn't exist an infoWSN.json file.
+// i.e. if it is the first time running the script, or if infoWSN.json was previewsly deleted
 var jsonWSN = {
     "PB0": {"pin": "P8_10", "name": "Calentador Pipo", "value": 0},
     "PB1": {"pin": "P8_11", "name": "Lampara Pipo", "value": 0}
 };
-//console.log(jsonWSN);
 
+// Configure pins as input or output
 bbb.pinMode(jsonWSN["PB0"].pin, bbb.OUTPUT);
 bbb.pinMode(jsonWSN["PB1"].pin, bbb.OUTPUT);
 
@@ -41,16 +43,20 @@ fs.readFile(jsonFileName, function(error, fileData) {
 });
 
 io.sockets.on('connection', function (socket) {
-    socket.on('digitalWrite', function(jsonClientData){
-        var data = JSON.parse(jsonClientData);
-        console.log("write pin: " + jsonWSN[data.id].pin + " value: " + data.value);
-        bbb.digitalWrite(jsonWSN[data.id].pin, data.value);
-        jsonWSN[data.id].value = data.value;
-        
-        // Store new values into json file infoWSN.json
-        fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function(err) {
-            if(err) console.log(err);
-            else console.log("JSON saved to " + jsonFileName);
-        });
-    });
+    socket.on('buttonPress', updateSystemState);
 });
+
+function updateSystemState (jsonClientData){
+    var data = JSON.parse(jsonClientData);
+    console.log("write pin: " + jsonWSN[data.id].pin + " value: " + data.value);
+    
+    // Update system state
+    bbb.digitalWrite(jsonWSN[data.id].pin, data.value);
+    jsonWSN[data.id].value = data.value;
+        
+    // Store new values into json file infoWSN.json
+    fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
+        if(err) console.log(err);
+        else console.log("JSON saved to " + jsonFileName);
+    });
+}
