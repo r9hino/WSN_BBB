@@ -15,7 +15,7 @@ var jsonWSN = {
     "PB0": {"pin": "P8_10", "name": "Calentador Pipo", "value": 0},
     "PB1": {"pin": "P8_11", "name": "Lampara Pipo", "value": 0}
 };
-console.log(jsonWSN);
+//console.log(jsonWSN);
 
 bbb.pinMode(jsonWSN["PB0"].pin, bbb.OUTPUT);
 bbb.pinMode(jsonWSN["PB1"].pin, bbb.OUTPUT);
@@ -26,12 +26,18 @@ fs.readFile(jsonFileName, function(error, fileData) {
     if(error){
         console.log("File doesn't exist. It will be created now...");
         fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function(err) {
-            if(err) {console.log(err);}
-            else {console.log("JSON saved to " + jsonFileName);}
+            if(err) console.log(err);
+            else console.log("JSON saved to " + jsonFileName);
         });
     }
-    // If it does exist, load JSON file into a variable
-    else {jsonWSN = JSON.parse(fileData);}
+    // If it does exist, load JSON file into a variable, and
+    // initialize system state from preview stored json file
+    else {
+        jsonWSN = JSON.parse(fileData);
+        for(var id in jsonWSN){
+            bbb.digitalWrite(jsonWSN[id].pin, jsonWSN[id].value);
+        }
+    }
 });
 
 io.sockets.on('connection', function (socket) {
@@ -43,8 +49,8 @@ io.sockets.on('connection', function (socket) {
         
         // Store new values into json file infoWSN.json
         fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function(err) {
-            if(err) {console.log(err);}
-            else {console.log("JSON saved to " + jsonFileName);}
+            if(err) console.log(err);
+            else console.log("JSON saved to " + jsonFileName);
         });
     });
 });
