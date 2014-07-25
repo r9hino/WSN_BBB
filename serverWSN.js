@@ -39,7 +39,6 @@ io.sockets.on('connection', function (socket) {
 
     function updateSystemState (clientData){
         var data = clientData;
-        //var data = JSON.parse(jsonClientData);
         console.log("write pin: " + jsonWSN[data.id].pin + " value: " + data.value);
         
         // Update system state
@@ -52,7 +51,7 @@ io.sockets.on('connection', function (socket) {
         // Store new values into json file infoWSN.json
         fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
             if(err) console.log(err);
-            else console.log("JSON saved to " + jsonFileName);
+            else console.log("JSON file saved at " + jsonFileName);
         });
     }
 });

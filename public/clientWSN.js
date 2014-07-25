@@ -1,4 +1,3 @@
-
 /*
     Client side script for handling WSN devices.
 */
@@ -29,36 +28,35 @@ $(document).ready(function(){
 
 			$('#controlPanel').trigger('create');
 
-			if (value === 1){$('#'+pbId+'1').prop("checked",true).checkboxradio("refresh");}
-			else{$('#'+pbId+'1').prop("checked",false).checkboxradio("refresh");}
-
-			if (value === 0){$('#'+pbId+'2').prop("checked",true).checkboxradio("refresh");}
-			else{$('#'+pbId+'2').prop("checked",false).checkboxradio("refresh");}
+			updateDynamicallyAddedButtons(pbId, value);
 		}
     });
-    
-    // Handle clicks on dynamically created buttons. Send new states to server.
-    // Care must be taken in the future, because click handler is based on 
-    // labels and not on inputs (check .dynamicButton).
+
+    // Handle clicks/changes on dynamically created buttons. Send new states to server.
     $('#controlPanel').on('change','.dynamicButton', function() {
-        // "this" correspond to the label tag clicked
-        console.log($(this).attr('name'), $(this).attr('value'));
+        // "this" correspond to the input radio button clicked/changed.
         var pbId = $(this).attr('name');    // PB0, PB1, etc.
         var value = parseInt($(this).attr('value'));
-        
+
+        // Send button state to server.
+        console.log("This client data: ", {"id":pbId, "value":value})
         socket.emit('buttonPress', {"id":pbId, "value":value});
     });
 
-    // Update client control panel do to changes in others client's the control panel
+    // Update client control panel do to changes in others client's control panel.
     socket.on('updateClients', function (othersClientsData) {
-        console.log(othersClientsData);
+        console.log("Other client data: ", othersClientsData);
         var pbId = othersClientsData.id;
         var value = othersClientsData.value;
 
-		if (value === 1){$('#'+pbId+'1').prop("checked",true).checkboxradio("refresh");}
+        updateDynamicallyAddedButtons(pbId, value);
+    });
+
+    function updateDynamicallyAddedButtons(pbId, value){
+        if (value === 1){$('#'+pbId+'1').prop("checked",true).checkboxradio("refresh");}
 		else{$('#'+pbId+'1').prop("checked",false).checkboxradio("refresh");}
 
 		if (value === 0){$('#'+pbId+'2').prop("checked",true).checkboxradio("refresh");}
-		else{$('#'+pbId+'2').prop("checked",false).checkboxradio("refresh");}        
-    });
+		else{$('#'+pbId+'2').prop("checked",false).checkboxradio("refresh");}   
+    }
 });
