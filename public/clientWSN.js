@@ -6,47 +6,59 @@
 $(document).ready(function(){
     var socket = io.connect();
 
-    // When ready page loading, retrieve json file with the system state
+    // When page loading is ready, retrieve json file with the system state.
     $.getJSON("/getSystemState/", function(jsonServerData){
         $('#controlPanel').empty();  // Empty the div
 
-        var j = 0;
-		for (var key in jsonServerData) {
-		    var name = jsonServerData[key].name;
-		    var value = jsonServerData[key].value;
+        for (var pbId in jsonServerData) {
+		    var name = jsonServerData[pbId].name;
+		    var value = jsonServerData[pbId].value;
 		    
-		    // Create buttons based on the system state
+		    // Create buttons based on the system state.
 		    $('#controlPanel').append(
-				'<div id="radiogroup'+j+'" data-role="fieldcontain">\
+				'<div id="'+pbId+'Radiogroup" data-role="fieldcontain">\
 					<fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">\
 					<legend>'+name+'</legend>\
-					<input type="radio" name="PB'+j+'" id="PB'+j+'1" checked="checked"/>\
-					<label class="dynamicButton" name="PB'+j+'" value=1 for="PB'+j+'1">On</label>\
-					<input type="radio" name="PB'+j+'" id="PB'+j+'2" />\
-					<label class="dynamicButton" name="PB'+j+'" value=0 for="PB'+j+'2">Off</label>\
+					<input type="radio" name="'+pbId+'" id="'+pbId+'1" checked="checked"/>\
+					<label class="dynamicButton" name="'+pbId+'" value=1 for="'+pbId+'1">On</label>\
+					<input type="radio" name="'+pbId+'" id="'+pbId+'2" />\
+					<label class="dynamicButton" name="'+pbId+'" value=0 for="'+pbId+'2">Off</label>\
 					</fieldset>\
 				</div>'
 			);
 
 			$('#controlPanel').trigger('create');
 
-			if (value === 1){$('#PB'+j+'1').prop("checked",true).checkboxradio( "refresh" );}
-			else{$('#PB'+j+'1').prop("checked",false).checkboxradio( "refresh" );}
+			if (value === 1){$('#'+pbId+'1').prop("checked",true).checkboxradio("refresh");}
+			else{$('#'+pbId+'1').prop("checked",false).checkboxradio("refresh");}
 
-			if (value === 0){$('#PB'+j+'2').prop("checked",true).checkboxradio( "refresh" );}
-			else{$('#PB'+j+'2').prop("checked",false).checkboxradio( "refresh" );}        
-
-			j++;		
+			if (value === 0){$('#'+pbId+'2').prop("checked",true).checkboxradio("refresh");}
+			else{$('#'+pbId+'2').prop("checked",false).checkboxradio("refresh");}
 		}
     });
     
     // Handle clicks on dynamically created buttons. Send new states to server.
+    // Care must be taken in the future, because click handler is based on 
+    // labels and not on inputs (check .dynamicButton).
     $('#controlPanel').on('click','.dynamicButton', function() {
+        // "this" correspond to the label tag clicked
         console.log($(this).attr('name'), $(this).attr('value'));
-        var id = $(this).attr('name');
-        var value = $(this).attr('value');
-        //console.log(str);
-        socket.emit('buttonPress', '{"id":"'+id+'", "value":'+value+'}');
+        var pbId = $(this).attr('name');    // PB0, PB1, etc.
+        var value = parseInt($(this).attr('value'));
+        
+        socket.emit('buttonPress', {"id":pbId, "value":value});
     });
 
+    // Update client control panel do to changes in others client's the control panel
+    socket.on('updateClients', function (othersClientsData) {
+        console.log(othersClientsData);
+        var pbId = othersClientsData.id;
+        var value = othersClientsData.value;
+
+		if (value === 1){$('#'+pbId+'1').prop("checked",true).checkboxradio("refresh");}
+		else{$('#'+pbId+'1').prop("checked",false).checkboxradio("refresh");}
+
+		if (value === 0){$('#'+pbId+'2').prop("checked",true).checkboxradio("refresh");}
+		else{$('#'+pbId+'2').prop("checked",false).checkboxradio("refresh");}        
+    });
 });

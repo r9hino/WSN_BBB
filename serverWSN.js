@@ -36,19 +36,24 @@ app.get('/setSystemState/:id/:value', function(req, res) {
 
 io.sockets.on('connection', function (socket) {
     socket.on('buttonPress', updateSystemState);
+
+    function updateSystemState (clientData){
+        var data = clientData;
+        //var data = JSON.parse(jsonClientData);
+        console.log("write pin: " + jsonWSN[data.id].pin + " value: " + data.value);
+        
+        // Update system state
+        bbb.digitalWrite(jsonWSN[data.id].pin, data.value);
+        jsonWSN[data.id].value = data.value;
+
+        // Broadcast new system state to all connected clients
+        socket.broadcast.emit('updateClients', clientData);
+
+        // Store new values into json file infoWSN.json
+        fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
+            if(err) console.log(err);
+            else console.log("JSON saved to " + jsonFileName);
+        });
+    }
 });
 
-function updateSystemState (jsonClientData){
-    var data = JSON.parse(jsonClientData);
-    console.log("write pin: " + jsonWSN[data.id].pin + " value: " + data.value);
-    
-    // Update system state
-    bbb.digitalWrite(jsonWSN[data.id].pin, data.value);
-    jsonWSN[data.id].value = data.value;
-        
-    // Store new values into json file infoWSN.json
-    fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
-        if(err) console.log(err);
-        else console.log("JSON saved to " + jsonFileName);
-    });
-}
