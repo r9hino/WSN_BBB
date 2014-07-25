@@ -16,15 +16,15 @@ $(document).ready(function(){
 		    
 		    // Create buttons based on the system state.
 		    $('#controlPanel').append(
-				'<div id="'+pbId+'Radiogroup" data-role="fieldcontain">\
-					<fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">\
-					<legend>'+name+'</legend>\
-					<input type="radio" name="'+pbId+'" id="'+pbId+'1" checked="checked"/>\
-					<label class="dynamicButton" name="'+pbId+'" value=1 for="'+pbId+'1">On</label>\
-					<input type="radio" name="'+pbId+'" id="'+pbId+'2" />\
-					<label class="dynamicButton" name="'+pbId+'" value=0 for="'+pbId+'2">Off</label>\
-					</fieldset>\
-				</div>'
+			'<div id="'+pbId+'Radiogroup" data-role="fieldcontain">\
+				<fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">\
+				<legend>'+name+'</legend>\
+				<input type="radio" class="dynamicButton" name="'+pbId+'" value=1 id="'+pbId+'1" checked="checked"/>\
+				<label for="'+pbId+'1">On</label>\
+				<input type="radio" class="dynamicButton" name="'+pbId+'" value=0 id="'+pbId+'2" />\
+				<label for="'+pbId+'2">Off</label>\
+				</fieldset>\
+			</div>'
 			);
 
 			$('#controlPanel').trigger('create');
@@ -40,7 +40,7 @@ $(document).ready(function(){
     // Handle clicks on dynamically created buttons. Send new states to server.
     // Care must be taken in the future, because click handler is based on 
     // labels and not on inputs (check .dynamicButton).
-    $('#controlPanel').on('click','.dynamicButton', function() {
+    $('#controlPanel').on('change','.dynamicButton', function() {
         // "this" correspond to the label tag clicked
         console.log($(this).attr('name'), $(this).attr('value'));
         var pbId = $(this).attr('name');    // PB0, PB1, etc.
