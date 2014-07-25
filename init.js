@@ -1,8 +1,6 @@
 var fs = require('fs');
 var bbb = require('bonescript');
 
-//var jsonWSN;
-
 function initialization() {
     // This json will be loaded only if there doesn't exist an infoWSN.json file.
     // i.e. if it is the first time running the script, or if infoWSN.json was previewsly deleted

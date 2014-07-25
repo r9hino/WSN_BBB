@@ -11,12 +11,28 @@ var bbb = require('bonescript');
 
 app.use(express.static(__dirname + '/public'));
 
-// System state initialization
+// System state initialization module
 var init = require('./init');
 // Create or restore system's state JSON file infoWSN.json
 var jsonWSN = init.initialization();
 var jsonFileName = __dirname + "/infoWSN.json";
 
+
+//******************************************************************************
+// Routes
+
+// Return to client the json file with the system state
+app.get('/getSystemState', function(req, res) {
+    res.send(jsonWSN);
+});
+
+// Set new values for devices
+app.get('/setSystemState/:id/:value', function(req, res) {
+    res.send([req.params.id, req.params.value]);
+});
+
+//******************************************************************************
+// Socket connection handlers
 
 io.sockets.on('connection', function (socket) {
     socket.on('buttonPress', updateSystemState);

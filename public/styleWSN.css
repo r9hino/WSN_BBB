@@ -1,22 +1,5 @@
 @charset "UTF-8";
 /* CSS Document */
-table {  
-    width: 100%;
-}
-th {
-  background: #d9d9d9; 
-  font-weight: bold;
-}
-tr:nth-child(even)
-{
-    background: #f0f0f0;
-}
-/* Delete columntoggle button */
-.ui-table-columntoggle-btn 
-{ 
-	display: none;
-}
-
 
 .boxouter {
 	position:relative;

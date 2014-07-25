@@ -12,9 +12,9 @@
 	<link rel="stylesheet" href="styleWSN.css" type="text/css" >
 	
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" type="text/javascript"></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/jquerymobile/1.4.3/jquery.mobile.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquerymobile/1.4.3/jquery.mobile.min.js" type="text/javascript"></script>
 	<script src="/socket.io/socket.io.js"></script>
-	<script src="clientWSN.js"></script>
+	<script src="clientWSN.js" type="text/javascript"></script>
 </head> 
  
 <body>
@@ -24,12 +24,7 @@
 	    </div>
 
 	    <div data-role="main" class="ui-content">
-	        <div data-role="controlgroup" data-type="horizontal">
-                <input type="button" id="onButton" value="on" onClick="ledOn();">
-                <input type="button" id="offButton" value="off" onClick="ledOff();">
-            </div>
-            
-	        <div id="control_panel">
+	        <div id="controlPanel">
             </div>
 	    </div>
 	    
