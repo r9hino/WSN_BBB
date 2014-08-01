@@ -1,10 +1,13 @@
 /*  
+    Author: Philippe Ilharreguy
+    Company: SET
+    
     WSN control server using Node.js
 */
 
 var express = require('express');
 var app = express();
-var server = app.listen(5555);
+var server = app.listen(8888);
 var io = require('socket.io').listen(server);
 var fs = require('fs');
 var bbb = require('bonescript');
@@ -16,7 +19,6 @@ var init = require('./init');
 // Create or restore system's state JSON file infoWSN.json
 var jsonWSN = init.initialization();
 var jsonFileName = __dirname + "/infoWSN.json";
-
 
 //******************************************************************************
 // Routes
@@ -31,15 +33,24 @@ app.get('/setSystemState/:id/:value', function(req, res) {
     res.send([req.params.id, req.params.value]);
 });
 
+
 //******************************************************************************
 // Socket connection handlers
-
+//io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling', 'polling']);
+//console.log(io);
+ 
 io.sockets.on('connection', function (socket) {
+    console.log("Client connected. Clients count: " + io.eio.clientsCount);
+    socket.on('disconnect', function() {
+        console.log('Client disconnected. Clients count: ' + io.eio.clientsCount);
+    });
+    
     socket.on('buttonPress', updateSystemState);
-
+    
     function updateSystemState (clientData){
         var data = clientData;
-        console.log("write pin: " + jsonWSN[data.id].pin + " value: " + data.value);
+        console.log("Name: " + jsonWSN[data.id].name + "  Value: " + data.value +
+                    "  Pin: " + jsonWSN[data.id].pin);
         
         // Update system state
         bbb.digitalWrite(jsonWSN[data.id].pin, data.value);

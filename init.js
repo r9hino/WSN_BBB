@@ -10,13 +10,12 @@ function initialization() {
     };
     
     // Configure pins as input or output
-    bbb.pinMode(jsonWSN["pb0"].pin, bbb.OUTPUT);
-    bbb.pinMode(jsonWSN["pb1"].pin, bbb.OUTPUT);
+    //bbb.pinMode(jsonWSN["pb0"].pin, bbb.OUTPUT);
+    //bbb.pinMode(jsonWSN["pb1"].pin, bbb.OUTPUT);
     
     var jsonFileName = __dirname + "/infoWSN.json";
     
-    // If file exists, system preview's values are restored
-    if (fs.existsSync(jsonFileName)) {
+    try {
         var fileData = fs.readFileSync(jsonFileName);
         jsonWSN = JSON.parse(fileData);
         for(var id in jsonWSN){
@@ -24,13 +23,27 @@ function initialization() {
         }
         console.log("System initialization OK.");
     }
-    // If JSON file doesn't exist, create new one based on jsonWSN variable
-    else {
-        console.log("File doesn't exist. It will be created now...");
-        fs.writeFileSync(jsonFileName, JSON.stringify(jsonWSN, null, 4));
-        console.log("JSON saved to " + jsonFileName);
+    catch (e) {
+        // Here you get the error when the file was not found.
+        if (e.code === 'ENOENT') {
+            console.log("File doesn't exist. It will be created now...");
+            fs.writeFileSync(jsonFileName, JSON.stringify(jsonWSN, null, 4));
+            console.log("JSON saved to " + jsonFileName);
+        }
+        // File exist but is empty.
+        else if (e.code === undefined) {
+            console.log("File exists but is empty. Using initial configuration...");
+            fs.writeFileSync(jsonFileName, JSON.stringify(jsonWSN, null, 4));
+            console.log("JSON saved to " + jsonFileName);
+        }
+        // Any other error.
+        else {
+            console.log("Error reding/loading JSON file.");
+            console.log(e.code);
+            throw e;
+        }
     }
-    
+
     return jsonWSN;
 }
 
