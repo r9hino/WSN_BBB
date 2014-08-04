@@ -3,6 +3,9 @@
     Company: SET
     
     WSN control server using Node.js
+    
+    To execute serverWSN.js as a deamon (bg process + logging) use:
+    sudo nohup node serverWSN.js &>> server.log &
 */
 
 var express = require('express');
@@ -19,6 +22,10 @@ var init = require('./init');
 // Create or restore system's state JSON file infoWSN.json
 var jsonWSN = init.initialization();
 var jsonFileName = __dirname + "/infoWSN.json";
+
+// Date instance
+var dateTime = require('./dateTime');
+
 
 //******************************************************************************
 // Routes
@@ -38,20 +45,21 @@ app.get('/setSystemState/:id/:value', function(req, res) {
 // Socket connection handlers
 //io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling', 'polling']);
 //console.log(io);
- 
+
 io.sockets.on('connection', function (socket) {
-    console.log("Client connected. Clients count: " + io.eio.clientsCount);
+    console.log(dateTime.getDateTime() + '  Client connected. Clients count: ' + io.eio.clientsCount);
     socket.on('disconnect', function() {
-        console.log('Client disconnected. Clients count: ' + io.eio.clientsCount);
+        console.log(dateTime.getDateTime() + '  Client disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
     socket.on('buttonPress', updateSystemState);
     
     function updateSystemState (clientData){
         var data = clientData;
-        console.log("Name: " + jsonWSN[data.id].name + "  Value: " + data.value +
+        console.log(dateTime.getDateTime() + "  Name: " + jsonWSN[data.id].name +
+                    "  Value: " + data.value +
                     "  Pin: " + jsonWSN[data.id].pin);
-        
+
         // Update system state
         bbb.digitalWrite(jsonWSN[data.id].pin, data.value);
         jsonWSN[data.id].value = data.value;
@@ -62,7 +70,7 @@ io.sockets.on('connection', function (socket) {
         // Store new values into json file infoWSN.json
         fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
             if(err) console.log(err);
-            else console.log("JSON file saved at " + jsonFileName);
+            //else console.log("JSON file saved at " + jsonFileName);
         });
     }
 });

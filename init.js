@@ -10,8 +10,8 @@ function initialization() {
     };
     
     // Configure pins as input or output
-    //bbb.pinMode(jsonWSN["pb0"].pin, bbb.OUTPUT);
-    //bbb.pinMode(jsonWSN["pb1"].pin, bbb.OUTPUT);
+    bbb.pinMode(jsonWSN["pb0"].pin, bbb.OUTPUT);
+    bbb.pinMode(jsonWSN["pb1"].pin, bbb.OUTPUT);
     
     var jsonFileName = __dirname + "/infoWSN.json";
     

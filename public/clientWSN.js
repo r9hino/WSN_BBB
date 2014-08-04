@@ -5,31 +5,35 @@
 $(document).ready(function(){
     var socket = io.connect();
 
-    // When page loading is ready, retrieve json file with the system state.
-    $.getJSON("/getSystemState/", function(jsonServerData){
-        $('#controlPanel').empty();  // Empty the div
+    // Each time client connects/reconnects, it requests the system state to the server
+    // Warning: maybe we have to include 'reconnect' event...
+    socket.on('connect',function(){
+        // When page loading is ready, retrieve json file with the system state.
+        $.getJSON("/getSystemState/", function(jsonServerData){
+            $('#controlPanel').empty();  // Empty the div
+    
+            for (var pbId in jsonServerData) {
+    		    var name = jsonServerData[pbId].name;
+    		    var value = jsonServerData[pbId].value;
 
-        for (var pbId in jsonServerData) {
-		    var name = jsonServerData[pbId].name;
-		    var value = jsonServerData[pbId].value;
+    		    // Create buttons based on the system state.
+    		    $('#controlPanel').append(
+    			'<div id="'+pbId+'Radiogroup" data-role="fieldcontain">\
+    				<fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">\
+    				<legend>'+name+'</legend>\
+    				<input type="radio" class="dynamicButton" name="'+pbId+'" value=1 id="'+pbId+'1" checked="checked"/>\
+    				<label for="'+pbId+'1">On</label>\
+    				<input type="radio" class="dynamicButton" name="'+pbId+'" value=0 id="'+pbId+'2" />\
+    				<label for="'+pbId+'2">Off</label>\
+    				</fieldset>\
+    			</div>'
+    			);
 
-		    // Create buttons based on the system state.
-		    $('#controlPanel').append(
-			'<div id="'+pbId+'Radiogroup" data-role="fieldcontain">\
-				<fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">\
-				<legend>'+name+'</legend>\
-				<input type="radio" class="dynamicButton" name="'+pbId+'" value=1 id="'+pbId+'1" checked="checked"/>\
-				<label for="'+pbId+'1">On</label>\
-				<input type="radio" class="dynamicButton" name="'+pbId+'" value=0 id="'+pbId+'2" />\
-				<label for="'+pbId+'2">Off</label>\
-				</fieldset>\
-			</div>'
-			);
+    			$('#controlPanel').trigger('create');
 
-			$('#controlPanel').trigger('create');
-
-			updateDynamicallyAddedButtons(pbId, value);
-		}
+    			updateDynamicallyAddedButtons(pbId, value);
+    		}
+        });
     });
 
     // Send data.
@@ -77,4 +81,5 @@ $(document).ready(function(){
 		    $('#connectionStatus').css('color', 'red');
         }
     };
+    
 });
