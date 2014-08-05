@@ -8,7 +8,7 @@ $(document).ready(function(){
     // Each time client connects/reconnects, it requests the system state to the server
     // Warning: maybe we have to include 'reconnect' event...
     socket.on('connect',function(){
-        // When page loading is ready, retrieve json file with the system state.
+        // When client connects/reconnects, retrieve json file with the system state.
         $.getJSON("/getSystemState/", function(jsonServerData){
             $('#controlPanel').empty();  // Empty the div
     
@@ -25,8 +25,12 @@ $(document).ready(function(){
     				<label for="'+pbId+'1">On</label>\
     				<input type="radio" class="dynamicButton" name="'+pbId+'" value=0 id="'+pbId+'2" />\
     				<label for="'+pbId+'2">Off</label>\
-    				</fieldset>\
-    			</div>'
+                    </fieldset>\
+    			</div>\
+    			<div>\
+    			<input type="checkbox" name="'+pbId+'checkbox" id="'+pbId+'checkbox" data-mini="true" data-inline="true">\
+                <label for="'+pbId+'checkbox" data-inline="true">Auto On</label>\
+                </div>'
     			);
 
     			$('#controlPanel').trigger('create');
@@ -48,12 +52,17 @@ $(document).ready(function(){
         socket.emit('buttonPress', {"id":pbId, "value":value});
     });
 
-    // Receive data.
-    // Update client control panel do to changes in others client's control panel.
-    socket.on('updateClients', function (othersClientsData) {
-        console.log("Other client data: ", othersClientsData);
-        var pbId = othersClientsData.id;
-        var value = othersClientsData.value;
+    /* Receive data.
+       Update client control panel do to changes in others client's control panel.
+    
+       Also used as feedback from the server. Client --> Server --> Client.
+       Client send new states to server, and if server did the work, it send back
+       again the system state values as a confirmation procedure.
+    */
+    socket.on('updateClients', function (serverData) {
+        console.log("Client data: ", serverData);
+        var pbId = serverData.id;
+        var value = serverData.value;
 
         updateDynamicallyAddedButtons(pbId, value);
     });
