@@ -12,29 +12,24 @@ $(document).ready(function(){
         $.getJSON("/getSystemState/", function(jsonServerData){
             $('#controlPanel').empty();  // Empty the div
     
-            for (var pbId in jsonServerData) {
-    		    var name = jsonServerData[pbId].name;
-    		    var value = jsonServerData[pbId].value;
-    		    var autoMode = jsonServerData[pbId].autoMode;
+            for (var devId in jsonServerData) {
+    		    var name = jsonServerData[devId].name;
+    		    var switchValue = jsonServerData[devId].switchValue;
+    		    var autoMode = jsonServerData[devId].autoMode;
 
     		    // Create buttons based on the system state.
     		    $('#controlPanel').append(
-    			'<div id="'+pbId+'Radiogroup" data-role="fieldcontain">\
-    				<fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">\
-    				<legend>'+name+'</legend>\
-    				<input type="radio" class="dynamicButton" name="'+pbId+'" value=1 id="'+pbId+'1" checked="checked"/>\
-    				<label for="'+pbId+'1">On</label>\
-    				<input type="radio" class="dynamicButton" name="'+pbId+'" value=0 id="'+pbId+'2" />\
-    				<label for="'+pbId+'2">Off</label>\
-                    </fieldset>\
-    			</div>\
-    			<input type="checkbox" class="dynamicCheckBox" name="'+pbId+'" id="'+pbId+'checkbox" data-mini="true">\
-                <label for="'+pbId+'checkbox">Auto On</label>'
+                '<div class="ui-field-contain">\
+                    <input type="checkbox" class="dynamic" name="'+devId+'" id="'+devId+'switch" data-role="flipswitch">\
+                        <label for="'+devId+'switch" class="inline">'+name+'</label>\
+                    <input type="checkbox" class="dynamic" name="'+devId+'" id="'+devId+'checkbox" data-mini="true">\
+                        <label for="'+devId+'checkbox" class="inline">Auto On</label>\
+                </div>'
     			);
 
     			$('#controlPanel').trigger('create');
 
-    			updateDynamicallyAddedButtons(pbId, value, autoMode);
+    			updateDynamicallyAddedButtons(devId, switchValue, autoMode);
     		}
         });
     });
@@ -42,26 +37,17 @@ $(document).ready(function(){
     // Send data.
     // Use .on() method when working with dynamically created buttons
     // Handles clicks/changes on dynamically created buttons. Send new states to server.
-    $('#controlPanel').on('change','.dynamicButton', function() {
+    $('#controlPanel').on('change', '.dynamic', function() {
         // "this" correspond to the input radio button clicked/changed.
-        var pbId = $(this).attr('name');    // PB0, PB1, etc.
-        var value = parseInt($(this).attr('value'));
+        var devId = $(this).prop('name');    // PB0, PB1, etc.
+        var switchValue = $('#'+devId+'switch').prop('checked') ? 1 : 0;  // If switch is on set switchValue to 1.
+        var autoMode = $('#'+devId+'checkbox').prop('checked') ? 1 : 0;   // If checked is true set value to 1.
 
         // Send button state to server.
-        //console.log("This client data: ", {"id":pbId, "value":value})
-        socket.emit('buttonPress', {"id":pbId, "value":value});
+        console.log('This client data: ', {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode})
+        socket.emit('elementChanged', {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode});
     });
     
-    // Handles selection on dynamically added checkboxes. Send new states to server.
-    $('#controlPanel').on('change', '.dynamicCheckBox', function() {
-        // "this" correspond to the input radio button clicked/changed.
-        var pbId = $(this).prop('name');    // PB0, PB1, etc.
-        var value = $(this).prop('checked') ? 1 : 0;    // If checked set value to 1.
-
-        // Send checkbox state to server.
-        //console.log("This client data: ", {"id":pbId, "value":value})
-        socket.emit('checkBoxPress', {"id":pbId, "autoMode":value});
-    });
 
     /* Receive data.
        Update client control panel do to changes in others client's control panel.
@@ -72,23 +58,21 @@ $(document).ready(function(){
     */
     socket.on('updateClients', function (serverData) {
         console.log("Data from server: ", serverData);
-        var pbId = serverData.id;
-        var value = serverData.value;
+        var devId = serverData.id;
+        var switchValue = serverData.switchValue;
         var autoMode = serverData.autoMode;
 
-        updateDynamicallyAddedButtons(pbId, value, autoMode);
+        updateDynamicallyAddedButtons(devId, switchValue, autoMode);
     });
 
     // Update buttons colors when selected.
-    function updateDynamicallyAddedButtons(pbId, value, autoMode){
-        if (value === 1){$('#'+pbId+'1').prop("checked",true).checkboxradio("refresh");}
-		else{$('#'+pbId+'1').prop("checked",false).checkboxradio("refresh");}
-
-		if (value === 0){$('#'+pbId+'2').prop("checked",true).checkboxradio("refresh");}
-		else{$('#'+pbId+'2').prop("checked",false).checkboxradio("refresh");}
+    function updateDynamicallyAddedButtons(devId, switchValue, autoMode){
+        if (switchValue === 1){$('#'+devId+'switch').prop("checked",true).flipswitch("refresh");}
+		else{$('#'+devId+'switch').prop("checked",false).flipswitch("refresh");}
 		
-		if (autoMode === 1) $('#'+pbId+'checkbox').prop("checked",true).checkboxradio("refresh");
-		else $('#'+pbId+'checkbox').prop("checked",false).checkboxradio("refresh");
+		// Check or uncheck checkbox.
+		if (autoMode === 1) $('#'+devId+'checkbox').prop("checked",true).checkboxradio("refresh");
+		else $('#'+devId+'checkbox').prop("checked",false).checkboxradio("refresh");
     }
     
     // Check if client has connection with the server each interval of time.
@@ -107,3 +91,33 @@ $(document).ready(function(){
     };
     
 });
+
+/*
+ // Create buttons based on the system state.
+    		    $('#controlPanel').append(
+    			'<div id="'+devId+'Radiogroup" data-role="fieldcontain">\
+    				<fieldset data-role="controlgroup" data-type="horizontal" data-mini="true">\
+    				<legend>'+name+'</legend>\
+    				<input type="radio" class="dynamicButton" name="'+devId+'" value=1 id="'+devId+'1" checked="checked"/>\
+    				<label for="'+devId+'1">On</label>\
+    				<input type="radio" class="dynamicButton" name="'+devId+'" value=0 id="'+devId+'2" />\
+    				<label for="'+devId+'2">Off</label>\
+                    </fieldset>\
+    			</div>\
+    			<input type="checkbox" class="dynamicCheckBox" name="'+devId+'" id="'+devId+'checkbox" data-mini="true">\
+                <label for="'+devId+'checkbox">Auto On</label>'
+    			);
+*/
+
+    // Handles selection on dynamically added checkboxes. Send new states to server.
+    /*$('#controlPanel').on('change', '.dynamicCheckBox', function() {
+        // "this" correspond to the input checkbox clicked/changed.
+        var devId = $(this).prop('name');    // PB0, PB1, etc.
+        var switchValue = $('#'+devId+'switch').prop('checked') ? 1 : 0;
+        var autoMode = $(this).prop('checked') ? 1 : 0;   // If checked is true set value to 1.
+
+        // Send checkbox state to server.
+        console.log('This client data: ', {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode})
+        socket.emit('checkBoxPress', {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode});
+    });
+*/

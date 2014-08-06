@@ -48,13 +48,27 @@ app.get('/setSystemState/:id/:value', function(req, res) {
 //io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling', 'polling']);
 //console.log(io);
 
-// Scheduling job with cron module.
-var job = new cronJob('*/5 * 19 * * 1-5', 
-    function(){ updateSystemState({"id":"pb1", "value":1}); }, 
+// Scheduling jobs with cron module.
+var heaterScheduler = new cronJob('0 0 7 * * 1-5', function(){
+        bbb.digitalWrite(jsonWSN["dev0"].pin, 1);
+        jsonWSN["dev0"].switchValue = 1;
+        io.sockets.emit('updateClients', jsonWSN["dev0"]);
+    }, 
     null,
-    true, /* Start the job right now */
+    false, /* Start the job right now true/false. */
     null
 );
+
+var lightScheduler = new cronJob('*/10 * * * * *', function(){ 
+        bbb.digitalWrite(jsonWSN["dev1"].pin, 1);
+        jsonWSN["dev1"].switchValue = 1;
+        io.sockets.emit('updateClients', jsonWSN["dev1"]);
+    }, 
+    null,
+    false, /* Start the job right now true/false. */
+    null
+);
+
 //console.log(job);
 //job.start();
 
@@ -64,35 +78,32 @@ io.sockets.on('connection', function (socket) {
         console.log(dateTime.getDateTime() + '  Client disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
-    socket.on('buttonPress', updateSystemState);
-    socket.on('checkBoxPress', updateSystemState);
+    socket.on('elementChanged', updateSystemState);
 });
 
-// Update system state based on clientData parameter object.
+// Update system state based on clientData property values sended by client's browsers.
+// clientData format is: {"id":"dev0", "switchValue":1} or {"id":"dev0", "autoMode":1}
 function updateSystemState (clientData){
-    /*  Some properties from clientData may have undefined value depending on 
-        which jquery element sended the clientData. All not undefined properties
-        on clientData will be saved on the jsonWSN object. All undefined 
-        properties will be replaced with the stored properties from jsonWSN.
-    */
-    if(clientData.value !== undefined) {
-        jsonWSN[clientData.id].value = clientData.value;
-    }
-    if(clientData.autoMode !== undefined) {
-        jsonWSN[clientData.id].autoMode = clientData.autoMode;
-    }
-    //console.log(jsonWSN[clientData.id]);
+
+    jsonWSN[clientData.id].switchValue = clientData.switchValue;
+    jsonWSN[clientData.id].autoMode = clientData.autoMode;
+
     var data = jsonWSN[clientData.id];
-    
+
     console.log(dateTime.getDateTime() +
                 "  Name: " + data.name +
-                "  Button value: " + data.value +
+                "  Switch value: " + data.switchValue +
                 "  Checkbox value: " + data.autoMode +
                 "  Pin: " + data.pin);
 
     // Update system state
-    bbb.digitalWrite(data.pin, data.value);
-    
+    bbb.digitalWrite(data.pin, data.switchValue);
+
+    // Start scheduler only if autoMode is 1 and device is off.
+    // Pointless to start scheduler if device is already on.
+    if((data.switchValue === 0) & (data.autoMode === 1)) heaterScheduler.start();
+    else heaterScheduler.stop();
+
     // Broadcast new system state to all connected clients
     io.sockets.emit('updateClients', data);
 
