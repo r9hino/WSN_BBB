@@ -69,8 +69,6 @@ var lightScheduler = new cronJob('*/10 * * * * *', function(){
     null
 );
 
-//console.log(job);
-//job.start();
 
 io.sockets.on('connection', function (socket) {
     console.log(dateTime.getDateTime() + '  Client connected. Clients count: ' + io.eio.clientsCount);
@@ -92,17 +90,19 @@ function updateSystemState (clientData){
 
     console.log(dateTime.getDateTime() +
                 "  Name: " + data.name +
-                "  Switch value: " + data.switchValue +
-                "  Checkbox value: " + data.autoMode +
-                "  Pin: " + data.pin);
+                ",  Switch value: " + data.switchValue +
+                ",  Checkbox value: " + data.autoMode +
+                ",  Pin: " + data.pin);
 
     // Update system state
     bbb.digitalWrite(data.pin, data.switchValue);
 
     // Start scheduler only if autoMode is 1 and device is off.
     // Pointless to start scheduler if device is already on.
-    if((data.switchValue === 0) & (data.autoMode === 1)) heaterScheduler.start();
+    if((jsonWSN["dev0"].switchValue === 0) & (jsonWSN["dev0"].autoMode === 1)) heaterScheduler.start();
     else heaterScheduler.stop();
+    if((jsonWSN["dev1"].switchValue === 0) & (jsonWSN["dev1"].autoMode === 1)) lightScheduler.start();
+    else lightScheduler.stop();
 
     // Broadcast new system state to all connected clients
     io.sockets.emit('updateClients', data);

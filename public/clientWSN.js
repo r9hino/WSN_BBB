@@ -34,10 +34,12 @@ $(document).ready(function(){
         });
     });
 
+
     // Send data.
-    // Use .on() method when working with dynamically created buttons
-    // Handles clicks/changes on dynamically created buttons. Send new states to server.
-    $('#controlPanel').on('change', '.dynamic', function() {
+    // Use .on() method when working with dynamically created buttons.
+    // Handles clicks/changes events and send new states to server.
+    $('#controlPanel').on('change', '.dynamic', changeHandler);
+    function changeHandler (e) {
         // "this" correspond to the input radio button clicked/changed.
         var devId = $(this).prop('name');    // PB0, PB1, etc.
         var switchValue = $('#'+devId+'switch').prop('checked') ? 1 : 0;  // If switch is on set switchValue to 1.
@@ -46,12 +48,11 @@ $(document).ready(function(){
         // Send button state to server.
         console.log('This client data: ', {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode})
         socket.emit('elementChanged', {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode});
-    });
+    }
     
 
     /* Receive data.
        Update client control panel do to changes in others client's control panel.
-    
        Also used as feedback from the server. Client --> Server --> Client.
        Client send new states to server, and if server did the work, it send back
        again the system state values as a confirmation procedure.
@@ -65,16 +66,27 @@ $(document).ready(function(){
         updateDynamicallyAddedButtons(devId, switchValue, autoMode);
     });
 
+
     // Update buttons colors when selected.
     function updateDynamicallyAddedButtons(devId, switchValue, autoMode){
-        if (switchValue === 1){$('#'+devId+'switch').prop("checked",true).flipswitch("refresh");}
-		else{$('#'+devId+'switch').prop("checked",false).flipswitch("refresh");}
-		
-		// Check or uncheck checkbox.
+        $('#controlPanel').off();
+
+        // Turn on or off switch checkbox.
+        if (switchValue === 1)  $('#'+devId+'switch').prop("checked",true).flipswitch("refresh");
+        else  $('#'+devId+'switch').prop("checked",false).flipswitch("refresh");
+
+        
+		// Check or uncheck Auto Mode checkbox.
 		if (autoMode === 1) $('#'+devId+'checkbox').prop("checked",true).checkboxradio("refresh");
 		else $('#'+devId+'checkbox').prop("checked",false).checkboxradio("refresh");
+		
+		// Reactivate on 'change' event handler. This way we avoid reentering to 
+		// on 'change' event handler after each 'refresh'. Event handler must be 
+		// execute only by manually action an not due to program actions, like when refreshing.
+		$('#controlPanel').on('change', '.dynamic', changeHandler);
     }
-    
+
+
     // Check if client has connection with the server each interval of time.
     setInterval(isClientConnected, 1500);
     function isClientConnected () {
