@@ -5,8 +5,8 @@ function initialization() {
     // This json will be loaded only if there doesn't exist an infoWSN.json file.
     // i.e. if it is the first time running the script, or if infoWSN.json was previewsly deleted
     var jsonWSN = {
-        "pb0": {"pin": "P8_10", "name": "Calentador Pipo", "value": 0},
-        "pb1": {"pin": "P8_11", "name": "Lampara Pipo", "value": 0}
+        "pb0": {"id":"pb0", "pin": "P8_10", "name": "Calentador Pipo", "value": 0, "autoMode": 0},
+        "pb1": {"id":"pb1", "pin": "P8_11", "name": "Lampara Pipo"   , "value": 0, "autoMode": 0}
     };
     
     // Configure pins as input or output

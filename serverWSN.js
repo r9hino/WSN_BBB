@@ -65,22 +65,36 @@ io.sockets.on('connection', function (socket) {
     });
     
     socket.on('buttonPress', updateSystemState);
+    socket.on('checkBoxPress', updateSystemState);
 });
 
 // Update system state based on clientData parameter object.
 function updateSystemState (clientData){
-    var data = clientData;          // clientData format: {"id":pbId, "value":value}
+    /*  Some properties from clientData may have undefined value depending on 
+        which jquery element sended the clientData. All not undefined properties
+        on clientData will be saved on the jsonWSN object. All undefined 
+        properties will be replaced with the stored properties from jsonWSN.
+    */
+    if(clientData.value !== undefined) {
+        jsonWSN[clientData.id].value = clientData.value;
+    }
+    if(clientData.autoMode !== undefined) {
+        jsonWSN[clientData.id].autoMode = clientData.autoMode;
+    }
+    //console.log(jsonWSN[clientData.id]);
+    var data = jsonWSN[clientData.id];
+    
     console.log(dateTime.getDateTime() +
-                "  Name: " + jsonWSN[data.id].name +
-                "  Value: " + data.value +
-                "  Pin: " + jsonWSN[data.id].pin);
+                "  Name: " + data.name +
+                "  Button value: " + data.value +
+                "  Checkbox value: " + data.autoMode +
+                "  Pin: " + data.pin);
 
     // Update system state
-    bbb.digitalWrite(jsonWSN[data.id].pin, data.value);
-    jsonWSN[data.id].value = data.value;
-
+    bbb.digitalWrite(data.pin, data.value);
+    
     // Broadcast new system state to all connected clients
-    io.sockets.emit('updateClients', clientData);
+    io.sockets.emit('updateClients', data);
 
     // Store new values into json file infoWSN.json
     fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
