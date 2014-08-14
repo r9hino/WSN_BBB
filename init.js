@@ -7,17 +7,19 @@ function initialization() {
     var jsonWSN = {
         "dev0": {
             "id":"dev0",
-            "pin": "P8_10",
-            "name": "Calentador Pipo",
+            "pin": "P8_11",
+            "name": "Lampara Pipo",
             "switchValue": 0,
-            "autoMode": 0
+            "autoMode": 0,
+            "autoTime":""
         },
         "dev1": {
             "id":"dev1", 
-            "pin": "P8_11", 
-            "name": "Lampara Pipo",
+            "pin": "P8_12", 
+            "name": "Calentador Pipo",
             "switchValue": 0,
-            "autoMode": 0
+            "autoMode": 0,
+            "autoTime":""
         }
     };
     
@@ -38,9 +40,9 @@ function initialization() {
     catch (e) {
         // Here you get the error when the file was not found.
         if (e.code === 'ENOENT') {
-            console.log("File doesn't exist. It will be created now...");
+            console.log("JSON file doesn't exist. It will be created now...");
             fs.writeFileSync(jsonFileName, JSON.stringify(jsonWSN, null, 4));
-            console.log("JSON saved to " + jsonFileName);
+            console.log("JSON created and saved to " + jsonFileName);
         }
         // File exist but is empty.
         else if (e.code === undefined) {
