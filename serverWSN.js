@@ -6,6 +6,10 @@
     
     To execute serverWSN.js as a deamon (bg process + logging) use:
     sudo nohup node serverWSN.js &>> server.log &
+    
+    Links:
+    Cron library:   https://github.com/ncb000gt/node-cron/blob/master/lib/cron.js
+    Closure issue:  http://conceptf1.blogspot.com/2013/11/javascript-closures.html
 */
 
 require('nodetime').profile({
@@ -20,6 +24,7 @@ var io = require('socket.io').listen(server);
 var fs = require('fs');
 var bbb = require('bonescript');
 var cronJob = require('cron').CronJob;
+var cronTime = require('cron').CronTime;
 
 
 // System state initialization module
@@ -49,40 +54,40 @@ app.get('/setSystemState/:id/:value', function(req, res) {
 
 
 //******************************************************************************
+// Schedulers jobs initialization
+// Two function initializer where create in order to avoid closure ambiguity.
+
+var schedulerTime = {};
+var schedulerJob = {};
+
+function schedulerTimeInitialization (devId) {
+    return new cronTime('', null);
+}
+function schedulerJobInitialization (devId) {
+    return new cronJob('', function(){
+        bbb.digitalWrite(jsonWSN[devId].pin, 1);
+        jsonWSN[devId].switchValue = 1;
+        console.log("Automatic on: "+jsonWSN[devId].name);
+        io.sockets.emit('updateClients', jsonWSN[devId]);
+        // Store new values into json file infoWSN.json
+        fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
+            if(err) console.log(err);
+        });
+    }, 
+    null,   // Function execute after finishing the scheduler.
+    false,  // Start the job right now true/false.
+    null    // Timezone.
+    );
+}
+
+for (var devId in jsonWSN) {
+    schedulerTime[devId] = schedulerTimeInitialization(devId);
+    schedulerJob[devId] = schedulerJobInitialization(devId);
+}
+
+//******************************************************************************
 // Socket connection handlers
 //io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling', 'polling']);
-//console.log(io);
-
-// Scheduling jobs with cron module.
-var lightScheduler = new cronJob('*/10 * * * * *', function(){ 
-        bbb.digitalWrite(jsonWSN["dev0"].pin, 1);
-        jsonWSN["dev0"].switchValue = 1;
-        io.sockets.emit('updateClients', jsonWSN["dev0"]);
-        // Store new values into json file infoWSN.json
-        fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
-            if(err) console.log(err);
-        });
-    }, 
-    null,
-    false, /* Start the job right now true/false. */
-    null
-);
-
-var heaterTime = new cronTime('0 0 8 * * *', null);
-var heaterScheduler = new cronJob('', function(){
-        bbb.digitalWrite(jsonWSN["dev1"].pin, 1);
-        jsonWSN["dev1"].switchValue = 1;
-        io.sockets.emit('updateClients', jsonWSN["dev1"]);
-        // Store new values into json file infoWSN.json
-        fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
-            if(err) console.log(err);
-        });
-    }, 
-    null,
-    false, /* Start the job right now true/false. */
-    null
-);
-
 
 // Listen to changes made from the clients control panel.
 io.sockets.on('connection', function (socket) {
@@ -97,12 +102,15 @@ io.sockets.on('connection', function (socket) {
 // Update system state based on clientData property values sended by client's browsers.
 // clientData format is: {"id":"dev0", "switchValue":1} or {"id":"dev0", "autoMode":1}
 function updateSystemState (clientData){
+    var devId = clientData.id;
     // Store received data in JSON object.
-    jsonWSN[clientData.id].switchValue = clientData.switchValue;
-    jsonWSN[clientData.id].autoMode = clientData.autoMode;
-    jsonWSN[clientData.id].autoTime = clientData.autoTime;
-
-    var data = jsonWSN[clientData.id];
+    jsonWSN[devId].switchValue = clientData.switchValue;
+    jsonWSN[devId].autoMode = clientData.autoMode;
+    jsonWSN[devId].autoTime = clientData.autoTime;  // autoTime must have a valid value, not undefined.
+    
+    var data = jsonWSN[devId];
+    // Update system state
+    bbb.digitalWrite(data.pin, data.switchValue);
 
     console.log(dateTime.getDateTime() +
                 "  Name: " + data.name +
@@ -111,18 +119,32 @@ function updateSystemState (clientData){
                 ",  AutoTime value: " + data.autoTime +
                 ",  Pin: " + data.pin);
 
-    // Update system state
-    bbb.digitalWrite(data.pin, data.switchValue);
+    // Broadcast new system state to all connected clients
+    io.sockets.emit('updateClients', data);
+
 
     // Start scheduler only if autoMode is 1 and device is off.
     // Pointless to start scheduler if device is already on.
-    if((jsonWSN["dev0"].switchValue === 0) & (jsonWSN["dev0"].autoMode === 1)) lightScheduler.start();
-    else lightScheduler.stop();
-    if((jsonWSN["dev1"].switchValue === 0) & (jsonWSN["dev1"].autoMode === 1)) heaterScheduler.start();
-    else heaterScheduler.stop();
+    // Check that autoTime is not an empty string or undefined, otherwise server will stop working.
+    if((data.switchValue === 0) & (data.autoMode === 1) & (data.autoTime !== "")) {
+        // Retrieve hours and minutes from client sended data.
+        var autoTimeSplit = data.autoTime.split(":");
+        // First convert to integer: "02" -> 2. Then convert to string again: 2 -> "2".
+        var hourStr = parseInt(autoTimeSplit[0], 10).toString();
+        var minuteStr = parseInt(autoTimeSplit[1], 10).toString();
 
-    // Broadcast new system state to all connected clients
-    io.sockets.emit('updateClients', data);
+        // Set new values to scheduler.
+        schedulerTime[devId].source = '0 '+minuteStr+' '+hourStr+' * * *';
+        schedulerTime[devId].hour = {};
+        schedulerTime[devId].minute = {};
+        schedulerTime[devId].hour[hourStr] = true;
+        schedulerTime[devId].minute[minuteStr] = true;
+        schedulerJob[devId].setTime(schedulerTime[devId]);
+        console.log(schedulerJob[devId].nextDate()+"  "+data.name);
+        schedulerJob[devId].start();
+    }
+    else schedulerJob[devId].stop();
+
 
     // Store new values into json file infoWSN.json
     fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
@@ -130,3 +152,5 @@ function updateSystemState (clientData){
         //else console.log("JSON file saved at " + jsonFileName);
     });
 }
+
+

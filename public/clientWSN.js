@@ -16,25 +16,26 @@ $(document).ready(function(){
     		    var name = jsonServerData[devId].name;
     		    var switchValue = jsonServerData[devId].switchValue;
     		    var autoMode = jsonServerData[devId].autoMode;
+    		    var autoTime = jsonServerData[devId].autoTime;
 
     		    // Create buttons based on the system state.
     		    $('#controlPanel').append(
                 '<div class="ui-field-contain">\
                     <label for="'+devId+'switch">'+name+'</label>\
-                    <input type="checkbox" class="dynamic" name="'+devId+'" id="'+devId+'switch" data-role="flipswitch">\
+                    <input type="checkbox" class="dynamic" name="'+devId+'" id="'+devId+'switch" data-role="flipswitch"/>\
                     <div class="horizontal-checkbox">\
                         <label for="'+devId+'checkbox" class="inline">Auto</label>\
-                        <input type="checkbox" class="dynamic" name="'+devId+'" id="'+devId+'checkbox" data-mini="true">\
+                        <input type="checkbox" class="dynamic" name="'+devId+'" id="'+devId+'checkbox" data-mini="true"/>\
                     </div>\
                     <div class="horizontal-time">\
-                        <input type="time" class="dynamic" name="'+devId+'" id="'+devId+'time" value="" data-clear-btn="false">\
+                        <input type="time" class="dynamic" name="'+devId+'" id="'+devId+'time" value="" data-clear-btn="false"/>\
                     </div>\
                 </div>'
     			);
 
     			$('#controlPanel').trigger('create');
 
-    			updateDynamicallyAddedButtons(devId, switchValue, autoMode);
+    			updateDynamicallyAddedButtons(devId, switchValue, autoMode, autoTime);
     		}
         });
     });
@@ -49,12 +50,10 @@ $(document).ready(function(){
         var devId = $(this).prop('name');    // Retrieve device Id.
         var switchValue = $('#'+devId+'switch').prop('checked') ? 1 : 0;  // If switch is on set switchValue to 1.
         var autoMode = $('#'+devId+'checkbox').prop('checked') ? 1 : 0;   // If checked is true set value to 1.
-        var autoTime = $('#'+devId+'time').val();//.split(":");
-        //var autoMin = autoTime[0];
-        //var autoHour = autoTime[1];
+        var autoTime = $('#'+devId+'time').val();
 
         // Send button state to server.
-        var devObj = {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime};//, 'autoMin':autoMin};
+        var devObj = {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime};
         console.log('This client data: ', devObj)
         socket.emit('elementChanged', devObj);
     }
@@ -71,24 +70,27 @@ $(document).ready(function(){
         var devId = serverData.id;
         var switchValue = serverData.switchValue;
         var autoMode = serverData.autoMode;
+        var autoTime = serverData.autoTime;
 
-        updateDynamicallyAddedButtons(devId, switchValue, autoMode);
+        updateDynamicallyAddedButtons(devId, switchValue, autoMode, autoTime);
     });
 
 
     // Update buttons colors when selected.
-    function updateDynamicallyAddedButtons(devId, switchValue, autoMode){
+    function updateDynamicallyAddedButtons(devId, switchValue, autoMode, autoTime){
         $('#controlPanel').off();
 
         // Turn on or off switch checkbox.
         if (switchValue === 1)  $('#'+devId+'switch').prop("checked",true).flipswitch("refresh");
         else  $('#'+devId+'switch').prop("checked",false).flipswitch("refresh");
 
-        
-		// Check or uncheck Auto Mode checkbox.
+        // Check or uncheck Auto Mode checkbox.
 		if (autoMode === 1) $('#'+devId+'checkbox').prop("checked",true).checkboxradio("refresh");
 		else $('#'+devId+'checkbox').prop("checked",false).checkboxradio("refresh");
-		
+
+		// Update time picker.
+		$('#'+devId+'time').val(autoTime);
+
 		// Reactivate on 'change' event handler. This way we avoid reentering to 
 		// on 'change' event handler after each 'refresh'. Event handler must be 
 		// execute only by manually action an not due to program actions, like when refreshing.
