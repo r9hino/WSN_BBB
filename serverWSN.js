@@ -55,8 +55,8 @@ app.get('/setSystemState/:id/:value', function(req, res) {
 
 //******************************************************************************
 // Schedulers jobs initialization
-// Two function initializer where create in order to avoid closure ambiguity.
 
+// Two function initializer where create in order to avoid closure ambiguity.
 var schedulerTime = {};
 var schedulerJob = {};
 
@@ -88,6 +88,8 @@ for (var devId in jsonWSN) {
 //******************************************************************************
 // Socket connection handlers
 //io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling', 'polling']);
+io.engine.transports = ['websocket', 'polling'];
+console.log(io);
 
 // Listen to changes made from the clients control panel.
 io.sockets.on('connection', function (socket) {
