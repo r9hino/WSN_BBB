@@ -12,6 +12,7 @@
     Closure issue:  http://conceptf1.blogspot.com/2013/11/javascript-closures.html
 */
 
+// nodetime.com monitoring system.
 require('nodetime').profile({
     accountKey: 'e54a03c529e0fcfa708e33d960d219579411194d', 
     appName: 'serverWSN.js'
@@ -25,16 +26,34 @@ var fs = require('fs');
 var bbb = require('bonescript');
 var cronJob = require('cron').CronJob;
 var cronTime = require('cron').CronTime;
+var SerialPort = require('serialport').SerialPort;
+var xbee_api = require('xbee-api');
 
 
-// System state initialization module
+// Serialport and xbee initialization.
+var xbeeAPI = new xbee_api.XBeeAPI({
+    api_mode: 2
+});
+var C = xbee_api.constants;   // xbee-api constants
+
+var serialport = new SerialPort("/dev/ttyO2", {
+    baudrate: 9600,
+    parser: xbeeAPI.rawParser()
+});
+
+var Xbee = require('./xbeeWSN');
+var xbee = new Xbee.xbee(serialport, xbeeAPI, C);
+
+
+// System state initialization module.
 var init = require('./init');
-// Create or restore system's state JSON file infoWSN.json
-var jsonWSN = init.initialization();
+var jsonWSN = init.initialization(bbb, xbee);    // Create or restore system's state JSON file infoWSN.json.
 var jsonFileName = __dirname + "/infoWSN.json";
+
 
 // Date instance for logging date and time.
 var dateTime = require('./dateTime');
+
 
 
 //******************************************************************************
@@ -52,6 +71,9 @@ app.get('/setSystemState/:id/:value', function(req, res) {
     res.send([req.params.id, req.params.value]);
 });
 
+//******************************************************************************
+// Xbee initialization and functions
+
 
 //******************************************************************************
 // Schedulers jobs initialization
@@ -65,15 +87,18 @@ function schedulerTimeInitialization (devId) {
 }
 function schedulerJobInitialization (devId) {
     return new cronJob('', function(){
-        bbb.digitalWrite(jsonWSN[devId].pin, 1);
         jsonWSN[devId].switchValue = 1;
-        console.log("Automatic on: "+jsonWSN[devId].name);
+        // Depend on device type (pin or xbee), a different function will control the device.
+        if (jsonWSN[devId].type === 'pin')  bbb.digitalWrite(jsonWSN[devId].pin, 1);
+        else if (jsonWSN[devId].type === 'xbee') xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, C.D4.DIGITAL_OUTPUT_HIGH);
+        
+        console.log('Automatic on: ' + jsonWSN[devId].name);
         io.sockets.emit('updateClients', jsonWSN[devId]);
         // Store new values into json file infoWSN.json
         fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
             if(err) console.log(err);
         });
-    }, 
+    },
     null,   // Function execute after finishing the scheduler.
     false,  // Start the job right now true/false.
     null    // Timezone.
@@ -89,7 +114,7 @@ for (var devId in jsonWSN) {
 // Socket connection handlers
 //io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling', 'polling']);
 io.engine.transports = ['websocket', 'polling'];
-console.log(io);
+//console.log(io);
 
 // Listen to changes made from the clients control panel.
 io.sockets.on('connection', function (socket) {
@@ -111,8 +136,15 @@ function updateSystemState (clientData){
     jsonWSN[devId].autoTime = clientData.autoTime;  // autoTime must have a valid value, not undefined.
     
     var data = jsonWSN[devId];
+    
     // Update system state
-    bbb.digitalWrite(data.pin, data.switchValue);
+    // Depend on device type (pin or xbee), a different function will control the device.
+    if (data.type === 'pin')  bbb.digitalWrite(data.pin, data.switchValue);
+    else if (data.type === 'xbee') {
+        if(data.switchValue === 1) xbee.sendRemoteATCmdReq(data.xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
+        else xbee.sendRemoteATCmdReq(data.xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
+    }        
+    
 
     console.log(dateTime.getDateTime() +
                 "  Name: " + data.name +
@@ -128,14 +160,14 @@ function updateSystemState (clientData){
     // Start scheduler only if autoMode is 1 and device is off.
     // Pointless to start scheduler if device is already on.
     // Check that autoTime is not an empty string or undefined, otherwise server will stop working.
-    if((data.switchValue === 0) & (data.autoMode === 1) & (data.autoTime !== "")) {
+    if((data.switchValue === 0) && (data.autoMode === 1) && (data.autoTime !== "")) {
         // Retrieve hours and minutes from client sended data.
         var autoTimeSplit = data.autoTime.split(":");
         // First convert to integer: "02" -> 2. Then convert to string again: 2 -> "2".
         var hourStr = parseInt(autoTimeSplit[0], 10).toString();
         var minuteStr = parseInt(autoTimeSplit[1], 10).toString();
 
-        // Set new values to scheduler.
+        // Set new scheduler values.
         schedulerTime[devId].source = '0 '+minuteStr+' '+hourStr+' * * *';
         schedulerTime[devId].hour = {};
         schedulerTime[devId].minute = {};

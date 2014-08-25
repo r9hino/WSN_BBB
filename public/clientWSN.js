@@ -111,25 +111,8 @@ $(document).ready(function(){
     }
 
 
-    // Check if client has connection with the server each interval of time.
-    /*setInterval(isClientConnected, 1000);
-    var ticks = 0;
-    function isClientConnected () {
-        ticks++;
-        //console.log(socket);
-        // If client has an active connection with the server, display the online status.
-        if(socket.connected) {
-            $connectionStatus.text('Online '+ticks);
-		    $connectionStatus.css('color', 'green');
-        }
-        else {
-            $connectionStatus.text('Offline '+ticks);
-		    $connectionStatus.css('color', 'red');
-        }
-    };*/
-
     // Update connection status.
-    // Reasons: 'ping timeout', 'forced close'
+    // Reasons: 'ping timeout', 'forced close', 'transport close'
     socket.on('disconnect', function(reason){
         //console.log('User disconnected because ' + reason);
         $connectionStatus.text('Offline ' + reason);
@@ -145,18 +128,17 @@ $(document).ready(function(){
     });
 
    
-    //$(window).on('blur', windowBlurred);
-    //$(window).on('pagehide', windowBlurred);
-    //window.onblur = windowBlurred;
-    //window.addEventListener('pagehide', windowBlurred, false);
-    //window.addEventListener("blur", windowBlurred);
+    //$(window).on('blur', windowBlur);
+    //$(window).on('focus', windowFocus);
     //$(window).focusin(windowFocus);
-    //$(window).focusout(windowBlurred);    // Se active cambiando de pagina internamente
-    $(window).blur(windowBlurred);  // No se activa al cambiar de pagina internamente
+    //$(window).focusout(windowBlur);    // Se active cambiando de pagina internamente
+    
+    $(window).blur(windowBlur);  // No se activa al cambiar de pagina internamente
     $(window).focus(windowFocus);
 
     // Phone Chrome doesn't detect .blur() events, others browsers do.
-    function windowBlurred() {
+    // Waiting for some patches.
+    function windowBlur() {
         //$connectionStatus.css('color', 'red');
         socket.io.close();
     }
