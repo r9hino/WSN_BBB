@@ -10,13 +10,19 @@
 
 	    <div data-role="main" class="ui-content">
 	        <div id="sensor-iframes">
-                <iframe width="450" height="250" 
+	            <iframe width="450" height="260" 
+	                style="border: 1px solid #cccccc;" 
+	                src="http://api.thingspeak.com/channels/11818/charts/1?width=450&height=260&results=240&days=1&dynamic=false&type=spline&yaxis=Temperatura%20%C2%B0C&xaxis=Tiempo&title=Xbee%201%3A%20Temp%20%C2%B0C%20Living" >
+	            </iframe>
+
+                <iframe width="450" height="260" 
                     style="border: 1px solid #cccccc;" 
-                    src="http://thingspeak.com/channels/11818/charts/1">
+                    src="http://api.thingspeak.com/channels/11818/charts/2?width=450&height=260&results=240&days=1&dynamic=false&type=spline&yaxis=Temperatura%20C%C2%B0&xaxis=Tiempo&title=Xbee%202%3A%20Temp%20%C2%B0C%202do%20Piso" >
                 </iframe>
-                <iframe width="450" height="250" 
+                
+                <iframe width="450" height="260" 
                     style="border: 1px solid #cccccc;" 
-                    src="http://thingspeak.com/channels/11818/charts/2">
+                    src="http://api.thingspeak.com/channels/11818/charts/3?width=450&height=260&results=240&days=1&dynamic=false&type=spline&yaxis=Temperatura%20C%C2%B0&xaxis=Tiempo&title=Xbee%203%3A%20Temp%20%C2%B0C%20Pieza%20Mama" >
                 </iframe>
             </div>
 	    </div>

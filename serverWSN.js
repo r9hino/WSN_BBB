@@ -28,6 +28,7 @@ var cronJob = require('cron').CronJob;
 var cronTime = require('cron').CronTime;
 var SerialPort = require('serialport').SerialPort;
 var xbee_api = require('xbee-api');
+var ThingSpeakClient = require('thingspeakclient');
 
 
 // Serialport and xbee initialization.
@@ -41,14 +42,21 @@ var serialport = new SerialPort("/dev/ttyO2", {
     parser: xbeeAPI.rawParser()
 });
 
-var Xbee = require('./xbeeWSN');
-var xbee = new Xbee.xbee(serialport, xbeeAPI, C);
+var xbeeWSN = require('./xbeeWSN');
+var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
 
 
 // System state initialization module.
 var init = require('./init');
 var jsonWSN = init.initialization(bbb, xbee);    // Create or restore system's state JSON file infoWSN.json.
 var jsonFileName = __dirname + "/infoWSN.json";
+
+
+// ThingSpeak initialization
+var thingspeak = new ThingSpeakClient();
+thingspeak.attachChannel(11818, { writeKey:'1EQD8TANGANJHA3J'}, function () {
+    console.log('Thingspeak client ready.');
+});
 
 
 // Date instance for logging date and time.
@@ -90,7 +98,7 @@ function schedulerJobInitialization (devId) {
         jsonWSN[devId].switchValue = 1;
         // Depend on device type (pin or xbee), a different function will control the device.
         if (jsonWSN[devId].type === 'pin')  bbb.digitalWrite(jsonWSN[devId].pin, 1);
-        else if (jsonWSN[devId].type === 'xbee') xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, C.D4.DIGITAL_OUTPUT_HIGH);
+        else if (jsonWSN[devId].type === 'xbee') xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
         
         console.log('Automatic on: ' + jsonWSN[devId].name);
         io.sockets.emit('updateClients', jsonWSN[devId]);
@@ -188,3 +196,47 @@ function updateSystemState (clientData){
 }
 
 
+// Xbee frame receiver. The frame type determine which function is called.
+xbeeAPI.on("frame_object", function(frame) {
+    var frameType = frame.type;
+    
+    switch (frameType) {
+        // ZigBee IO Data Sample Rx Indicator.
+        case 0x92:
+            xbee.ZBIODataSampleRx(frame);
+            break;
+        case 0x97:
+            xbee.remoteCmdResponse(frame);
+            break;
+        default:
+            console.log("Not defined frame type: ");
+            console.log(frame);
+            break;
+    }
+});
+
+// Update ThingSpeak database each 5 minutes.
+setInterval(writeThingSpeak, 5*60*1000);
+
+function writeThingSpeak () {
+    // Create object with temperature averages.
+    var fieldsUpdate = {
+        field1: (xbee.sensorData['xbee1'].tempAccum/xbee.sensorData['xbee1'].sampleNum).toFixed(2),
+        field2: (xbee.sensorData['xbee2'].tempAccum/xbee.sensorData['xbee2'].sampleNum).toFixed(2),
+        field3: (xbee.sensorData['xbee3'].tempAccum/xbee.sensorData['xbee3'].sampleNum).toFixed(2)
+    };
+    console.log(fieldsUpdate);
+    thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp) {
+        if (err || resp <= 0) {
+            console.log('An error ocurred while updating ThingSpeak.');
+        }
+        // else console.log('Update successfully. Entry number was: ' + resp);
+    });
+    
+    // Restore sensorData object for new measurements.
+    for (var xbeeKey in xbee.sensorDataAccum) {
+        xbee.sensorData[xbeeKey].tempAccum = 0;
+        xbee.sensorData[xbeeKey].sampleNum = 0;
+    }
+    
+}
