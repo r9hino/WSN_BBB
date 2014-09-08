@@ -21,7 +21,7 @@ function xbee (serialport, xbeeAPI, constants) {
     'xbee2': '0013a20040a71859', 
     'xbee3': '0013a20040af6912'
     };
-    
+
     // Store xbee sensor data.
     this.sensorData = {
         'xbee1': {tempAccum: 0, sampleNum: 0},

@@ -2,7 +2,7 @@
     Author: Philippe Ilharreguy
     Company: SET
     
-    WSN control server using Node.js
+    WSN control server using Node.js.
     
     To execute serverWSN.js as a deamon (bg process + logging) use:
     sudo nohup node serverWSN.js &>> server.log &
@@ -10,6 +10,7 @@
     Links:
     Cron library:   https://github.com/ncb000gt/node-cron/blob/master/lib/cron.js
     Closure issue:  http://conceptf1.blogspot.com/2013/11/javascript-closures.html
+    Authentication: https://github.com/jaredhanson/passport-local/tree/master/examples/login
 */
 
 // nodetime.com monitoring system.
@@ -29,6 +30,42 @@ var cronTime = require('cron').CronTime;
 var SerialPort = require('serialport').SerialPort;
 var xbee_api = require('xbee-api');
 var ThingSpeakClient = require('thingspeakclient');
+var passport = require('passport');
+var LocalStrategy = require('passport-local').Strategy;
+var logger = require('morgan');
+var expressSession = require('express-session');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+var methodOverride = require('method-override');
+var favicon = require('serve-favicon');
+var flash = require('connect-flash');  
+
+
+// Users definition for system loggin.
+var users = [
+    { id: 0, username: 'guest', password: '1234'}
+];
+
+// Find user by ID.
+function findById(id, fn) {
+    var idx = id;
+    if (users[idx]) {
+        fn(null, users[idx]);
+    } 
+    else {
+        fn(new Error('User ' + id + ' does not exist'));
+    }
+}
+
+function findByUsername(username, fn) {
+    for (var i = 0, len = users.length; i < len; i++) {
+        var user = users[i];
+        if (user.username === username) {
+            return fn(null, user);
+        }
+    }
+    return fn(null, null);
+}
 
 
 // Serialport and xbee initialization.
@@ -42,11 +79,12 @@ var serialport = new SerialPort("/dev/ttyO2", {
     parser: xbeeAPI.rawParser()
 });
 
-var xbeeWSN = require('./xbeeWSN');
+var xbeeWSN = require('./jsCustoms/xbeeWSN');
 var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
 
 
 // System state initialization module.
+// init.js must be in the same directory as serverWSN.js, because both share infoWSN.json file.
 var init = require('./init');
 var jsonWSN = init.initialization(bbb, xbee);    // Create or restore system's state JSON file infoWSN.json.
 var jsonFileName = __dirname + "/infoWSN.json";
@@ -60,14 +98,71 @@ thingspeak.attachChannel(11818, { writeKey:'1EQD8TANGANJHA3J'}, function () {
 
 
 // Date instance for logging date and time.
-var dateTime = require('./dateTime');
-
+var dateTime = require('./jsCustoms/dateTime');
 
 
 //******************************************************************************
-// Routes
+// Passport setting
 
+passport.serializeUser(function(user, done) {
+    done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+    findById(id, function (err, user) {
+        done(err, user);
+    });
+});
+
+// Use the LocalStrategy within Passport.
+passport.use(new LocalStrategy( function (username, password, done) {
+    process.nextTick(function () {
+        findByUsername(username, function(err, user) {
+            if (err) { return done(err); }
+            if (!user) { return done(null, false, { message: 'Wrong username or password' }); }
+            if (user.password !== password) { return done(null, false, { message: 'Wrong username or password' }); }
+            return done(null, user);
+        });
+    });
+}));
+
+//******************************************************************************
+// Express configuration and route definitions
+
+app.set('views', __dirname + '/views');
+app.set('view engine', 'ejs');
+app.use(favicon(__dirname + '/public/favicon.ico'));
+app.use(logger('dev'));
+app.use(cookieParser());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(methodOverride());
+app.use(expressSession({ secret: 'keyboard cat' , saveUninitialized: true,  resave: true }));
+// Initialize Passport!  Also use passport.session() middleware, to support
+// persistent login sessions (recommended).
+app.use(flash());
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.static(__dirname + '/public'));
+
+
+app.get('/', ensureAuthenticated, function(req, res){
+    res.render('index', { user: req.user });
+});
+
+app.get('/SensorData', ensureAuthenticated, function(req, res){
+    res.render('SensorData', { user: req.user });
+});
+
+app.get('/login', function(req, res){
+    res.render('login', { user: req.user, message: req.flash('error') });
+});
+
+app.post('/login', passport.authenticate('local', {
+    successRedirect: '/',
+    failureRedirect: '/login',
+    failureFlash: true
+}));
 
 // Return to client the json file with the system state
 app.get('/getSystemState', function(req, res) {
@@ -79,9 +174,14 @@ app.get('/setSystemState/:id/:value', function(req, res) {
     res.send([req.params.id, req.params.value]);
 });
 
-//******************************************************************************
-// Xbee initialization and functions
 
+// Simple route middleware to ensure user is authenticated.
+function ensureAuthenticated(req, res, next) {
+    if (req.isAuthenticated()) return next();
+    
+    // If not authenticated, redirect user to login page.
+    res.redirect('/login');
+}
 
 //******************************************************************************
 // Schedulers jobs initialization
