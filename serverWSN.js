@@ -41,6 +41,42 @@ var favicon = require('serve-favicon');
 var flash = require('connect-flash');  
 
 
+// Serialport and xbee initialization.
+var xbeeAPI = new xbee_api.XBeeAPI({
+    api_mode: 2
+});
+var C = xbee_api.constants;   // xbee-api constants
+
+var serialport = new SerialPort("/dev/ttyO2", {
+    baudrate: 9600,
+    parser: xbeeAPI.rawParser()
+});
+
+var xbeeWSN = require('./js_customs/xbeeWSN');
+var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
+
+
+// System state initialization module.
+// init.js must be in the same directory as serverWSN.js, because both share infoWSN.json file.
+var init = require('./init');
+var jsonWSN = init.initialization(bbb, xbee);    // Create or restore system's state JSON file infoWSN.json.
+var jsonFileName = __dirname + "/database/infoWSN.json";
+
+
+// ThingSpeak initialization
+var thingspeak = new ThingSpeakClient();
+thingspeak.attachChannel(11818, { writeKey:'1EQD8TANGANJHA3J'}, function () {
+    console.log('Thingspeak client ready.');
+});
+
+
+// Date instance for logging date and time.
+var dateTime = require('./js_customs/dateTime');
+
+
+//******************************************************************************
+// Passport setting
+
 // Users definition for system loggin.
 var users = [
     { id: 0, username: 'guest', password: '1234'}
@@ -66,43 +102,6 @@ function findByUsername(username, fn) {
     }
     return fn(null, null);
 }
-
-
-// Serialport and xbee initialization.
-var xbeeAPI = new xbee_api.XBeeAPI({
-    api_mode: 2
-});
-var C = xbee_api.constants;   // xbee-api constants
-
-var serialport = new SerialPort("/dev/ttyO2", {
-    baudrate: 9600,
-    parser: xbeeAPI.rawParser()
-});
-
-var xbeeWSN = require('./jsCustoms/xbeeWSN');
-var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
-
-
-// System state initialization module.
-// init.js must be in the same directory as serverWSN.js, because both share infoWSN.json file.
-var init = require('./init');
-var jsonWSN = init.initialization(bbb, xbee);    // Create or restore system's state JSON file infoWSN.json.
-var jsonFileName = __dirname + "/infoWSN.json";
-
-
-// ThingSpeak initialization
-var thingspeak = new ThingSpeakClient();
-thingspeak.attachChannel(11818, { writeKey:'1EQD8TANGANJHA3J'}, function () {
-    console.log('Thingspeak client ready.');
-});
-
-
-// Date instance for logging date and time.
-var dateTime = require('./jsCustoms/dateTime');
-
-
-//******************************************************************************
-// Passport setting
 
 passport.serializeUser(function(user, done) {
     done(null, user.id);
@@ -145,43 +144,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.static(__dirname + '/public'));
 
+// Express routes definition.
+var routes = require('./app_routes/routes')(passport, jsonWSN);
+app.use('/', routes);
 
-app.get('/', ensureAuthenticated, function(req, res){
-    res.render('index', { user: req.user });
-});
-
-app.get('/SensorData', ensureAuthenticated, function(req, res){
-    res.render('SensorData', { user: req.user });
-});
-
-app.get('/login', function(req, res){
-    res.render('login', { user: req.user, message: req.flash('error') });
-});
-
-app.post('/login', passport.authenticate('local', {
-    successRedirect: '/',
-    failureRedirect: '/login',
-    failureFlash: true
-}));
-
-// Return to client the json file with the system state
-app.get('/getSystemState', function(req, res) {
-    res.send(jsonWSN);
-});
-
-// Set new values for devices
-app.get('/setSystemState/:id/:value', function(req, res) {
-    res.send([req.params.id, req.params.value]);
-});
-
-
-// Simple route middleware to ensure user is authenticated.
-function ensureAuthenticated(req, res, next) {
-    if (req.isAuthenticated()) return next();
-    
-    // If not authenticated, redirect user to login page.
-    res.redirect('/login');
-}
 
 //******************************************************************************
 // Schedulers jobs initialization

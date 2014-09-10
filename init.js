@@ -58,7 +58,7 @@ function initialization(bbb, xbee) {
     bbb.pinMode(jsonWSN["dev0"].pin, bbb.OUTPUT);
     bbb.pinMode(jsonWSN["dev1"].pin, bbb.OUTPUT);
     
-    var jsonFileName = __dirname + "/infoWSN.json";
+    var jsonFileName = __dirname + "/database/infoWSN.json";
     
     try {
         // If file exists, initialize states.

@@ -82,7 +82,7 @@ xbee.prototype.remoteCmdResponse = function (frame) {
     else if(commandStatus === 4) console.log("Remote Command Response: Remote Command Transmission Failed.");
 }
 
-// Retreive xbee key based on address: '0013a20040b82646' --> 'xbee1'
+// Retrieve xbee key based on address: '0013a20040b82646' --> 'xbee1'
 xbee.prototype.getXbeeKeyByAddress = function (address) {
     var addrXbee = this.addrXbee;
     for(var key in addrXbee) {
