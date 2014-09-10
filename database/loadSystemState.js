@@ -1,11 +1,14 @@
 var fs = require('fs');
 
-
-function initialization(bbb, xbee) {
-    var C = xbee.C;   // xbee-api constants.
+// Load to memory the system state from infoWSN.json file.
+// Turn on/off devices, depending on system state.
+// If any error occur trying to load infoWSN.json file, use default one defined here as jsonWSN.
+function loadSystemState(bbb, xbee) {
+   
+   var jsonFileName = __dirname + "/infoWSN.json";
     
     // This json will be loaded only if there doesn't exist an infoWSN.json file.
-    // i.e. if it is the first time running the script, or if infoWSN.json was previewsly deleted
+    // i.e. if it is the first time running the script, or if infoWSN.json was previewsly deleted.
     var jsonWSN = {
         "dev0": {
             "id":"dev0",
@@ -58,8 +61,7 @@ function initialization(bbb, xbee) {
     bbb.pinMode(jsonWSN["dev0"].pin, bbb.OUTPUT);
     bbb.pinMode(jsonWSN["dev1"].pin, bbb.OUTPUT);
     
-    var jsonFileName = __dirname + "/database/infoWSN.json";
-    
+    // Load system state from jsonWSN.json file.
     try {
         // If file exists, initialize states.
         var fileData = fs.readFileSync(jsonFileName);
@@ -67,13 +69,18 @@ function initialization(bbb, xbee) {
         
         // Restore system last state.
         for(var devId in jsonWSN){
+            // If device is connected to Beaglebone pin:
             if (jsonWSN[devId].type === 'pin') {
                 console.log('Setting up '+jsonWSN[devId].name+' state.');
                 bbb.digitalWrite(jsonWSN[devId].pin, jsonWSN[devId].switchValue);
             }
+            // If device is connected to an xbee module:
             else if (jsonWSN[devId].type === 'xbee') {
-                if(jsonWSN[devId].switchValue === 1) xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
-                else xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
+                if(jsonWSN[devId].switchValue === 1) 
+                    xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, xbee.C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
+                else 
+                    xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, xbee.C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
+                
                 console.log('Setting up '+jsonWSN[devId].name+' state.');
             }
         }
@@ -104,4 +111,4 @@ function initialization(bbb, xbee) {
     return jsonWSN;
 }
 
-exports.initialization = initialization;
+module.exports = loadSystemState;

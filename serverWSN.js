@@ -57,9 +57,8 @@ var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
 
 
 // System state initialization module.
-// init.js must be in the same directory as serverWSN.js, because both share infoWSN.json file.
-var init = require('./init');
-var jsonWSN = init.initialization(bbb, xbee);    // Create or restore system's state JSON file infoWSN.json.
+var loadSystemState = require('./database/loadSystemState');
+var jsonWSN = loadSystemState(bbb, xbee);    // Create or restore system's state from infoWSN.json file.
 var jsonFileName = __dirname + "/database/infoWSN.json";
 
 
@@ -77,38 +76,14 @@ var dateTime = require('./js_customs/dateTime');
 //******************************************************************************
 // Passport setting
 
-// Users definition for system loggin.
-var users = [
-    { id: 0, username: 'guest', password: '1234'}
-];
-
-// Find user by ID.
-function findById(id, fn) {
-    var idx = id;
-    if (users[idx]) {
-        fn(null, users[idx]);
-    } 
-    else {
-        fn(new Error('User ' + id + ' does not exist'));
-    }
-}
-
-function findByUsername(username, fn) {
-    for (var i = 0, len = users.length; i < len; i++) {
-        var user = users[i];
-        if (user.username === username) {
-            return fn(null, user);
-        }
-    }
-    return fn(null, null);
-}
+var users = require('./database/users');
 
 passport.serializeUser(function(user, done) {
     done(null, user.id);
 });
 
 passport.deserializeUser(function(id, done) {
-    findById(id, function (err, user) {
+    users.findById(id, function (err, user) {
         done(err, user);
     });
 });
@@ -116,7 +91,7 @@ passport.deserializeUser(function(id, done) {
 // Use the LocalStrategy within Passport.
 passport.use(new LocalStrategy( function (username, password, done) {
     process.nextTick(function () {
-        findByUsername(username, function(err, user) {
+        users.findByUsername(username, function(err, user) {
             if (err) { return done(err); }
             if (!user) { return done(null, false, { message: 'Wrong username or password' }); }
             if (user.password !== password) { return done(null, false, { message: 'Wrong username or password' }); }
@@ -192,9 +167,11 @@ io.engine.transports = ['websocket', 'polling'];
 
 // Listen to changes made from the clients control panel.
 io.sockets.on('connection', function (socket) {
-    console.log(dateTime.getDateTime() + '  Client connected. Clients count: ' + io.eio.clientsCount);
+    var connectIP = socket.conn.remoteAddress;
+    console.log(dateTime.getDateTime() + '   IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
     socket.on('disconnect', function() {
-        console.log(dateTime.getDateTime() + '  Client disconnected. Clients count: ' + io.eio.clientsCount);
+        var disconnectIP = socket.conn.remoteAddress;
+        console.log(dateTime.getDateTime() + '  IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
     socket.on('elementChanged', updateSystemState);

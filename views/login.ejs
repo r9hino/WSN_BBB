@@ -8,6 +8,7 @@
 	
 	<title>Login WSN</title>
 	<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jquerymobile/1.4.3/jquery.mobile.min.css" />
+	<link rel="stylesheet" href="login.css" type="text/css" />
 </head>
 
 <body>
@@ -16,15 +17,17 @@
 		    <h2>Login WSN</h2>
 	    </div>
         
+        <div id="logo-image">
+            <img src="logo128.png"  alt="Image Logo" >
+        </div>
+        
         <div data-role="main" class="ui-content">
             <form method="post" action="/login" data-ajax="false">
                 <div class="ui-field-contain">
-                    <label for="username">Username:</label>
-	                <input type="text" name="username" id="username"/>
-                    <label for="password">Password:</label>
-	                <input type="password" name="password" id="password"/>
+	                <input type="text" name="username" id="username" placeholder="Username"/>
+	                <input type="password" name="password" id="password" placeholder="Password"/>
                 </div>
-                <input type="submit" data-inline="true" value="Login">
+                <input type="submit" id="login-btn" value="Login">
                 
                 <% if (message) { %>
                 <p id="login-message" style="color:red"><%= message %></p>

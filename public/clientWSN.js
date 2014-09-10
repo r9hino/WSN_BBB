@@ -13,8 +13,8 @@ $(document).ready(function(){
     // Each time client connects/reconnects, it requests the system state to the server
     // Warning: maybe we have to include 'reconnect' event...
     socket.on('connect',function(){
-		socket.io.engine.pingInterval = 8000;
-        socket.io.engine.pingTimeout = 15000;
+		socket.io.engine.pingInterval = 7000;
+        socket.io.engine.pingTimeout = 12000;
         console.log('Connect socket status: ', socket);
         
         // Update connection status.
