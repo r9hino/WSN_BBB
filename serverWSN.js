@@ -1,12 +1,12 @@
 /*  
     Author: Philippe Ilharreguy
     Company: SET
-    
+
     WSN control server using Node.js.
-    
+
     To execute serverWSN.js as a deamon (bg process + logging) use:
     sudo nohup node serverWSN.js &>> server.log &
-    
+
     Links:
     Cron library:   https://github.com/ncb000gt/node-cron/blob/master/lib/cron.js
     Closure issue:  http://conceptf1.blogspot.com/2013/11/javascript-closures.html
@@ -17,12 +17,12 @@
 require('nodetime').profile({
     accountKey: 'e54a03c529e0fcfa708e33d960d219579411194d', 
     appName: 'serverWSN.js'
-  });
-  
+});
+
 var express = require('express');
-var app = express();
-var server = app.listen(8888);
-var io = require('socket.io').listen(server);
+//var app = express();
+//var server = app.listen(8888); 
+//var io = require('socket.io').listen(server);
 var fs = require('fs');
 var bbb = require('bonescript');
 var cronJob = require('cron').CronJob;
@@ -46,23 +46,26 @@ var xbeeAPI = new xbee_api.XBeeAPI({
     api_mode: 2
 });
 var C = xbee_api.constants;   // xbee-api constants
-
 var serialport = new SerialPort("/dev/ttyO2", {
     baudrate: 9600,
     parser: xbeeAPI.rawParser()
 });
-
-var xbeeWSN = require('./js_customs/xbeeWSN');
+var xbeeWSN = require('./lib/xbeeWSN');
 var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
 
 
-// System state initialization module.
+// Load system state.
 var loadSystemState = require('./database/loadSystemState');
-var jsonWSN = loadSystemState(bbb, xbee);    // Create or restore system's state from infoWSN.json file.
+var jsonWSN = loadSystemState();    // Load to memory system's state from infoWSN.json file.
 var jsonFileName = __dirname + "/database/infoWSN.json";
 
 
-// ThingSpeak initialization
+// Initialize devices to the preview system state.
+var initDevices = require('./lib/initDevices');
+initDevices(jsonWSN, bbb, xbee);
+
+
+// ThingSpeak initialization.
 var thingspeak = new ThingSpeakClient();
 thingspeak.attachChannel(11818, { writeKey:'1EQD8TANGANJHA3J'}, function () {
     console.log('Thingspeak client ready.');
@@ -70,38 +73,18 @@ thingspeak.attachChannel(11818, { writeKey:'1EQD8TANGANJHA3J'}, function () {
 
 
 // Date instance for logging date and time.
-var dateTime = require('./js_customs/dateTime');
+var dateTime = require('./lib/dateTime');
 
 
 //******************************************************************************
-// Passport setting
+// Passport, Express and Routes configuration
 
-var users = require('./database/users');
+// Passport strategy setting. It make use of users.js file.
+require('./app_routes/initPassport')(passport);
 
-passport.serializeUser(function(user, done) {
-    done(null, user.id);
-});
+//var app = require('./app_routes/app')();
 
-passport.deserializeUser(function(id, done) {
-    users.findById(id, function (err, user) {
-        done(err, user);
-    });
-});
-
-// Use the LocalStrategy within Passport.
-passport.use(new LocalStrategy( function (username, password, done) {
-    process.nextTick(function () {
-        users.findByUsername(username, function(err, user) {
-            if (err) { return done(err); }
-            if (!user) { return done(null, false, { message: 'Wrong username or password' }); }
-            if (user.password !== password) { return done(null, false, { message: 'Wrong username or password' }); }
-            return done(null, user);
-        });
-    });
-}));
-
-//******************************************************************************
-// Express configuration and route definitions
+var app = express();
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
@@ -122,6 +105,11 @@ app.use(express.static(__dirname + '/public'));
 // Express routes definition.
 var routes = require('./app_routes/routes')(passport, jsonWSN);
 app.use('/', routes);
+
+
+//var app = require('./app_routes/app');
+var server = app.listen(8888); 
+var io = require('socket.io')(server);
 
 
 //******************************************************************************

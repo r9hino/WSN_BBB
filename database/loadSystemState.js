@@ -1,9 +1,8 @@
 var fs = require('fs');
 
 // Load to memory the system state from infoWSN.json file.
-// Turn on/off devices, depending on system state.
 // If any error occur trying to load infoWSN.json file, use default one defined here as jsonWSN.
-function loadSystemState(bbb, xbee) {
+function loadSystemState() {
    
    var jsonFileName = __dirname + "/infoWSN.json";
     
@@ -56,36 +55,15 @@ function loadSystemState(bbb, xbee) {
             "autoTime":""
         }
     };
-    
-    // Configure pins as input or output
-    bbb.pinMode(jsonWSN["dev0"].pin, bbb.OUTPUT);
-    bbb.pinMode(jsonWSN["dev1"].pin, bbb.OUTPUT);
-    
+
     // Load system state from jsonWSN.json file.
     try {
         // If file exists, initialize states.
         var fileData = fs.readFileSync(jsonFileName);
         jsonWSN = JSON.parse(fileData);
-        
-        // Restore system last state.
-        for(var devId in jsonWSN){
-            // If device is connected to Beaglebone pin:
-            if (jsonWSN[devId].type === 'pin') {
-                console.log('Setting up '+jsonWSN[devId].name+' state.');
-                bbb.digitalWrite(jsonWSN[devId].pin, jsonWSN[devId].switchValue);
-            }
-            // If device is connected to an xbee module:
-            else if (jsonWSN[devId].type === 'xbee') {
-                if(jsonWSN[devId].switchValue === 1) 
-                    xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, xbee.C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
-                else 
-                    xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, xbee.C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
-                
-                console.log('Setting up '+jsonWSN[devId].name+' state.');
-            }
-        }
-        console.log("System initialization OK.");
+        console.log("System state loaded successfully.");
     }
+    
     catch (e) {
         console.log(e);
         // Here you get the error when the file was not found.
@@ -102,7 +80,7 @@ function loadSystemState(bbb, xbee) {
         }
         // Any other error.
         else {
-            console.log("Error reding/loading JSON file.");
+            console.log("Error reading/loading JSON file.");
             console.log(e.code);
             throw e;
         }

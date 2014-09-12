@@ -22,7 +22,7 @@ $(document).ready(function(){
 		$connectionStatus.css('color', 'green');
 		    
         // When client connects/reconnects, retrieve json file with the system state.
-        $.getJSON("/getSystemState/", function(jsonServerData){
+        $.getJSON("/getSystemState", function(jsonServerData){
             $controlPanel.empty();  // Empty the div
     
             for (var devId in jsonServerData) {
