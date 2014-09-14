@@ -3,28 +3,30 @@
 */
 
 $(document).ready(function(){
-    
+
     // Jquery variables.
     var $controlPanel = $('#controlPanel');
     var $connectionStatus = $('#connectionStatus');
-    
+
     var socket = io.connect();
-    
+
+    console.time('connection');    
     // Each time client connects/reconnects, it requests the system state to the server
     // Warning: maybe we have to include 'reconnect' event...
     socket.on('connect',function(){
+        console.timeEnd('connection');
 		socket.io.engine.pingInterval = 7000;
         socket.io.engine.pingTimeout = 12000;
         console.log('Connect socket status: ', socket);
-        
+
         // Update connection status.
         $connectionStatus.text('Online');
 		$connectionStatus.css('color', 'green');
-		    
+
         // When client connects/reconnects, retrieve json file with the system state.
-        $.getJSON("/getSystemState", function(jsonServerData){
+        socket.on('jsonWSN', function (jsonServerData) { 
             $controlPanel.empty();  // Empty the div
-    
+            
             for (var devId in jsonServerData) {
     		    var name = jsonServerData[devId].name;
     		    var switchValue = jsonServerData[devId].switchValue;
@@ -54,9 +56,9 @@ $(document).ready(function(){
     });
 
 
-    // Send data to server.
-    // Use .on() method when working with dynamically created buttons.
-    // Handles clicks/changes events and send new states to the server.
+    /* Send data to server.
+        Use .on() method when working with dynamically created buttons.
+        Handles clicks/changes events and send new states to the server.*/
     $controlPanel.on('change', '.dynamic', changeHandler);
     function changeHandler (e) {
         // "this" correspond to the input checkbox clicked/changed.
@@ -70,14 +72,13 @@ $(document).ready(function(){
         console.log('This client data: ', devObj)
         socket.emit('elementChanged', devObj);
     }
-    
+
 
     /* Receive data from server.
-       Update client control panel do to changes in others client's control panel.
-       Also used as feedback from the server. Client --> Server --> Client.
-       Client send new states to server, and if server did the work, it send back
-       again the system state values as a confirmation procedure.
-    */
+        Update client control panel do to changes in others client's control panel.
+        Also used as feedback from the server. Client --> Server --> Client.
+        Client send new states to server, and if server did the work, it send back
+        again the system state values as a confirmation procedure.*/
     socket.on('updateClients', function (serverData) {
         console.log("Data from server: ", serverData);
         var devId = serverData.id;

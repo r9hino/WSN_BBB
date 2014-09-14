@@ -159,9 +159,13 @@ io.sockets.on('connection', function (socket) {
     console.log(dateTime.getDateTime() + '   IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
     socket.on('disconnect', function() {
         var disconnectIP = socket.conn.remoteAddress;
-        console.log(dateTime.getDateTime() + '  IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
+        console.log(dateTime.getDateTime() + '   IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
+    // Send jsonWSN data to client side when connection occurs.
+    socket.emit('jsonWSN', jsonWSN);
+    
+    // Listen for changes made by user on browser/client side. Then update system state.
     socket.on('elementChanged', updateSystemState);
 });
 
