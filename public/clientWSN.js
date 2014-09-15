@@ -10,7 +10,7 @@ $(document).ready(function(){
 
     var socket = io.connect('pipobbb.mooo.com:8888',{
         rememberUpgrade: true,
-        transports: ['xhr-polling', 'websocket', 'polling', 'flashsocket']
+        transports: ['xhr-polling', 'websocket', 'flashsocket', 'polling']
     });
 
     console.time('connection');    
@@ -18,10 +18,13 @@ $(document).ready(function(){
     // Warning: maybe we have to include 'reconnect' event...
     socket.on('connect',function(){
         console.timeEnd('connection');
-		socket.io.engine.pingInterval = 7000;
-        socket.io.engine.pingTimeout = 14000;
+		//socket.io.engine.pingInterval = 7000;
+        //socket.io.engine.pingTimeout = 14000;
         console.log('Connect socket status: ', socket.io.engine);
 
+        // Enable all control elements if previously disabled.
+        $controlPanel.removeClass("ui-state-disabled");
+        
         // Update connection status.
         $connectionStatus.text('Online');
 		$connectionStatus.css('color', 'green');
@@ -118,7 +121,9 @@ $(document).ready(function(){
     // Update connection status.
     // Reasons: 'ping timeout', 'forced close', 'transport close'
     socket.on('disconnect', function(reason){
-        //console.log('User disconnected because ' + reason);
+        // Disable all control panel input elements. Re-enable in reconnection.
+        $controlPanel.addClass("ui-state-disabled");
+
         $connectionStatus.text('Offline ' + reason);
 		$connectionStatus.css('color', 'red');
 		console.log('Disconnect socket status: ', socket.io.engine);
@@ -132,24 +137,30 @@ $(document).ready(function(){
     });
 
    
-    //$(window).on('blur', windowBlur);
-    //$(window).on('focus', windowFocus);
+    $(window).on('blur', windowBlur);
+    $(window).on('focus', windowFocus);
     //$(window).focusin(windowFocus);
     //$(window).focusout(windowBlur);    // Se active cambiando de pagina internamente
     
-    $(window).blur(windowBlur);  // No se activa al cambiar de pagina internamente
-    $(window).focus(windowFocus);
+    //$(window).blur(windowBlur);  // No se activa al cambiar de pagina internamente
+    //$(window).focus(windowFocus);
 
     // Phone Chrome doesn't detect .blur() events, others browsers do.
     // Waiting for some patches.
     function windowBlur() {
-        //$connectionStatus.css('color', 'red');
         socket.io.close();
     }
     
     function windowFocus() {
-        socket.io.reconnect();
+        socket.io.connect();
     }
+    
+    // Avoid on click color persistance on navbar buttons.
+    //$('.nav-btn').on('click', function(e) {
+        //$(this).addClass('ui-btn-active');
+        //$(this).removeClass('ui-btn-active');
+        //$(this).removeClass(activeBtnClass);
+    //});
 });
 
 // socket.io.close();

@@ -40,7 +40,7 @@ function loadSystemState() {
             "id":"dev3",
             "type": "xbee",
             "xbee": "xbee2",
-            "name": "Lampara 2",
+            "name": "Calentador Raul",
             "switchValue": 0,
             "autoMode": 0,
             "autoTime":""
@@ -49,7 +49,7 @@ function loadSystemState() {
             "id":"dev4",
             "type": "xbee",
             "xbee": "xbee3",
-            "name": "Calentador Mama",
+            "name": "Xbee Free",
             "switchValue": 0,
             "autoMode": 0,
             "autoTime":""

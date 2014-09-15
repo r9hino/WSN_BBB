@@ -150,22 +150,23 @@ for (var devId in jsonWSN) {
 // Socket connection handlers
 //io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling', 'polling']);
 //io.engine.transports = ['websocket', 'polling'];
-//console.log(io);
 
 var io = require('socket.io')(server, {
-    transports: ['xhr-polling', 'websocket', 'polling', 'flashsocket']
+    pingInterval: 7000,
+    pingTimeout: 16000,
+    transports: ['xhr-polling', 'websocket', 'flashsocket', 'polling']
 });
 
 // Listen to changes made from the clients control panel.
 io.sockets.on('connection', function (socket) {
     var connectIP = socket.client.conn.remoteAddress;
-    console.log(dateTime.getDateTime() + '   IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
+    console.log(dateTime.getDateTime() + '  IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
     socket.on('disconnect', function() {
         var disconnectIP = socket.client.conn.remoteAddress;
-        console.log(dateTime.getDateTime() + '   IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
+        console.log(dateTime.getDateTime() + '  IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
-    // Send jsonWSN data to client side when connection occurs.
+    // Send jsonWSN data to client when connection occurs.
     socket.emit('jsonWSN', jsonWSN);
     
     // Listen for changes made by user on browser/client side. Then update system state.
