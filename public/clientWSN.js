@@ -8,7 +8,10 @@ $(document).ready(function(){
     var $controlPanel = $('#controlPanel');
     var $connectionStatus = $('#connectionStatus');
 
-    var socket = io.connect();
+    var socket = io.connect('pipobbb.mooo.com:8888',{
+        rememberUpgrade: true,
+        transports: ['xhr-polling', 'websocket', 'polling', 'flashsocket']
+    });
 
     console.time('connection');    
     // Each time client connects/reconnects, it requests the system state to the server
@@ -16,8 +19,8 @@ $(document).ready(function(){
     socket.on('connect',function(){
         console.timeEnd('connection');
 		socket.io.engine.pingInterval = 7000;
-        socket.io.engine.pingTimeout = 12000;
-        console.log('Connect socket status: ', socket);
+        socket.io.engine.pingTimeout = 14000;
+        console.log('Connect socket status: ', socket.io.engine);
 
         // Update connection status.
         $connectionStatus.text('Online');
@@ -118,14 +121,14 @@ $(document).ready(function(){
         //console.log('User disconnected because ' + reason);
         $connectionStatus.text('Offline ' + reason);
 		$connectionStatus.css('color', 'red');
-		console.log('Disconnect socket status: ', socket);
+		console.log('Disconnect socket status: ', socket.io.engine);
     });
     
     // Update connection status.
     socket.on('reconnecting', function(){
         $connectionStatus.text('Reconnecting');
 		$connectionStatus.css('color', 'blue');
-		console.log('Reconnect socket status: ', socket);
+		console.log('Reconnect socket status: ', socket.io.engine);
     });
 
    

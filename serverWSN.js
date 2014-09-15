@@ -109,7 +109,6 @@ app.use('/', routes);
 
 //var app = require('./app_routes/app');
 var server = app.listen(8888); 
-var io = require('socket.io')(server);
 
 
 //******************************************************************************
@@ -150,15 +149,19 @@ for (var devId in jsonWSN) {
 //******************************************************************************
 // Socket connection handlers
 //io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling', 'polling']);
-io.engine.transports = ['websocket', 'polling'];
+//io.engine.transports = ['websocket', 'polling'];
 //console.log(io);
+
+var io = require('socket.io')(server, {
+    transports: ['xhr-polling', 'websocket', 'polling', 'flashsocket']
+});
 
 // Listen to changes made from the clients control panel.
 io.sockets.on('connection', function (socket) {
-    var connectIP = socket.conn.remoteAddress;
+    var connectIP = socket.client.conn.remoteAddress;
     console.log(dateTime.getDateTime() + '   IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
     socket.on('disconnect', function() {
-        var disconnectIP = socket.conn.remoteAddress;
+        var disconnectIP = socket.client.conn.remoteAddress;
         console.log(dateTime.getDateTime() + '   IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
@@ -197,7 +200,7 @@ function updateSystemState (clientData){
                 ",  Pin: " + data.pin);
 
     // Broadcast new system state to all connected clients
-    io.sockets.emit('updateClients', data);
+    io.emit('updateClients', data);
 
 
     // Start scheduler only if autoMode is 1 and device is off.
