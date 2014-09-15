@@ -4,7 +4,7 @@
         "type": "pin",
         "pin": "P8_11",
         "name": "Lampara Pipo",
-        "switchValue": 1,
+        "switchValue": 0,
         "autoMode": 1,
         "autoTime": "07:30"
     },

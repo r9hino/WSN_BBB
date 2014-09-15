@@ -16,8 +16,8 @@ module.exports = function(passport, jsonWSN){
         res.render('index', { jsonWSN: jsonWSN });
     });
 
-    router.get('/SensorData', ensureAuthenticated, function(req, res){
-        res.render('SensorData', { user: req.user });
+    router.get('/sensordata', ensureAuthenticated, function(req, res){
+        res.render('sensordata', { user: req.user });
     });
 
     router.get('/login', function(req, res){

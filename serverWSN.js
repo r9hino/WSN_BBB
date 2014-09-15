@@ -174,7 +174,7 @@ io.sockets.on('connection', function (socket) {
 });
 
 // Update system state based on clientData property values sended by client's browsers.
-// clientData format is: {"id":"dev0", "switchValue":1} or {"id":"dev0", "autoMode":1}
+// clientData format is: {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime}
 function updateSystemState (clientData){
     var devId = clientData.id;
     // Store received data in JSON object.
