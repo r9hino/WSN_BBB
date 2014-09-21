@@ -18,16 +18,17 @@ $(document).ready(function(){
     // Warning: maybe we have to include 'reconnect' event...
     socket.on('connect',function(){
         console.timeEnd('connection');
-		//socket.io.engine.pingInterval = 7000;
-        //socket.io.engine.pingTimeout = 14000;
-        console.log('Connect socket status: ', socket.io.engine);
 
-        // Enable all control elements if previously disabled.
-        $controlPanel.removeClass("ui-state-disabled");
-        
+        console.log('Connect socket status: ', socket.io.engine);
         // Update connection status.
         $connectionStatus.text('Online');
 		$connectionStatus.css('color', 'green');
+        // When connection is established, enable all control elements if previously disabled.
+        $controlPanel.removeClass("ui-state-disabled");
+
+        // Disconnect from server after # seconds. Reconnection occurs when user clicks on grayed background.        
+        timerTimeout = null;
+        timerTimeout = setTimeout(disconnectOnTimeout, 45000);
 
         // When client connects/reconnects, retrieve json file with the system state.
         socket.on('jsonWSN', function (jsonServerData) { 
@@ -41,7 +42,7 @@ $(document).ready(function(){
 
     		    // Create buttons based on the system state.
     		    $controlPanel.append(
-                '<div class="ui-field-contain">\
+                '<div class="ui-field-contain ui-responsive">\
                     <label for="'+devId+'switch">'+name+'</label>\
                     <input type="checkbox" class="dynamic" name="'+devId+'" id="'+devId+'switch" data-role="flipswitch"/>\
                     <div class="horizontal-checkbox">\
@@ -49,19 +50,17 @@ $(document).ready(function(){
                         <input type="checkbox" class="dynamic" name="'+devId+'" id="'+devId+'checkbox" data-mini="true"/>\
                     </div>\
                     <div class="horizontal-time">\
-                        <input type="time" class="dynamic" name="'+devId+'" id="'+devId+'time" value="" data-clear-btn="false"/>\
+                        <input type="time" class="dynamic inline" name="'+devId+'" id="'+devId+'time" value="" data-clear-btn="false"/>\
                     </div>\
                 </div>'
     			);
-
     			$controlPanel.trigger('create');
-
     			updateDynamicallyAddedButtons(devId, switchValue, autoMode, autoTime);
     		}
         });
     });
 
-
+    
     /* Send data to server.
         Use .on() method when working with dynamically created buttons.
         Handles clicks/changes events and send new states to the server.*/
@@ -96,9 +95,9 @@ $(document).ready(function(){
     });
 
 
-    // Update buttons colors when selected.
+    // Update buttons status (colors) based on system state.
     function updateDynamicallyAddedButtons(devId, switchValue, autoMode, autoTime){
-        $controlPanel.off();
+        $controlPanel.off('change', '.dynamic', changeHandler);
 
         // Turn on or off switch checkbox.
         if (switchValue === 1)  $('#'+devId+'switch').prop("checked",true).flipswitch("refresh");
@@ -113,30 +112,46 @@ $(document).ready(function(){
 
 		// Reactivate on 'change' event handler. This way we avoid reentering to 
 		// on 'change' event handler after each 'refresh'. Event handler must be 
-		// execute only by manually action an not due to program actions, like when refreshing.
+		// execute only by manually actions an not due to program actions, like when refreshing.
 		$controlPanel.on('change', '.dynamic', changeHandler);
     }
-
 
     // Update connection status.
     // Reasons: 'ping timeout', 'forced close', 'transport close'
     socket.on('disconnect', function(reason){
-        // Disable all control panel input elements. Re-enable in reconnection.
-        $controlPanel.addClass("ui-state-disabled");
-
         $connectionStatus.text('Offline ' + reason);
 		$connectionStatus.css('color', 'red');
 		console.log('Disconnect socket status: ', socket.io.engine);
     });
-    
     // Update connection status.
     socket.on('reconnecting', function(){
         $connectionStatus.text('Reconnecting');
-		$connectionStatus.css('color', 'blue');
+		$connectionStatus.css('color', '#2356e1');
 		console.log('Reconnect socket status: ', socket.io.engine);
     });
 
-   
+
+    function disconnectOnTimeout() {
+        // Close connection after # seconds.
+        socket.io.close();
+        // Disable all control panel input elements. Grayed background. Re-enable it in reconnection.
+        $controlPanel.addClass('ui-state-disabled');
+    }
+    $(window).on('click', function(){
+        //console.log(document.hasFocus());
+        // If control panel is disabled, clicking in grayed background return connection to server.
+        if ($controlPanel.hasClass('ui-state-disabled')) {
+            socket.io.reconnect();
+        }
+        // If control panel is available, then each click reset setTimeout's timer.
+        // I.E. disconnection will occur # seconds after last click.
+        else {
+            clearTimeout(timerTimeout);
+            timerTimeout = null;
+            // Disconnect from server after # seconds. Reconnection occurs when user clicks on grayed background.        
+            timerTimeout = setTimeout(disconnectOnTimeout, 45000);
+        }
+    });
     $(window).on('blur', windowBlur);
     $(window).on('focus', windowFocus);
     //$(window).focusin(windowFocus);
@@ -145,22 +160,20 @@ $(document).ready(function(){
     //$(window).blur(windowBlur);  // No se activa al cambiar de pagina internamente
     //$(window).focus(windowFocus);
 
-    // Phone Chrome doesn't detect .blur() events, others browsers do.
-    // Waiting for some patches.
+    // Phone Chrome doesn't detect .blur() events, others browsers do. Waiting for some patches.
     function windowBlur() {
+        // Clear timer to avoid another disconnection on timeout.
+        clearTimeout(timerTimeout);
+        timerTimeout = null;
+        // On window losing focus, disconnect from server.
         socket.io.close();
+        // Disable all control panel input elements. Grayed background. It will be re-enable in reconnection.
+        $controlPanel.addClass('ui-state-disabled');
     }
     
     function windowFocus() {
-        socket.io.connect();
+        socket.io.reconnect();
     }
-    
-    // Avoid on click color persistance on navbar buttons.
-    //$('.nav-btn').on('click', function(e) {
-        //$(this).addClass('ui-btn-active');
-        //$(this).removeClass('ui-btn-active');
-        //$(this).removeClass(activeBtnClass);
-    //});
 });
 
 // socket.io.close();

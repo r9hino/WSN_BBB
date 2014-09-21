@@ -21,7 +21,17 @@ module.exports = function(passport, jsonWSN){
     });
 
     router.get('/login', function(req, res){
-        res.render('login', { user: req.user, message: req.flash('error') });
+        // If user is already logged, then redirect him to /index page.
+        //console.log(req.user);
+        //console.log(typeof(req.user));
+        if(req.user) {
+            //console.log('if');
+            res.redirect('/');
+        }
+        else {
+            //console.log('else');
+            res.render('login', { user: req.user, message: req.flash('error') });
+        }
     });
 
     router.post('/login', passport.authenticate('local', {

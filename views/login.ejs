@@ -7,20 +7,20 @@
 	
 	<title>Login WSN</title>
 	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.4/jquery.mobile-1.4.4.min.css" />
-	<link rel="stylesheet" href="login.css" type="text/css" />
+	<link rel="stylesheet" href="css/login.css" type="text/css" />
 </head>
 
 <body>
-    <div data-role="page" id="login-page">
+    <div data-role="page" id="login-page" data-ajax=”false”>
         <div data-role="header">
 		    <h2>Login WSN</h2>
 	    </div>
 
         <div id="logo-image">
-            <img src="logo128.png"  alt="Image Logo" >
+            <img src="images/logo128.png"  alt="Image Logo" >
         </div>
 
-        <div data-role="main" class="ui-content">
+        <div data-role="main" class="ui-content" data-ajax=”false”>
             <form method="post" action="/login" data-ajax="false">
                 <div class="ui-field-contain">
                     <input type="text" name="username" id="username" placeholder="Username"/>

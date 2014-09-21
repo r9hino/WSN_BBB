@@ -4,17 +4,18 @@
     <meta charset="UTF-8">
 	<!--Fit page width to mobile devices-->
 	<!--<meta name="viewport" content="initial-scale=1, maximum-scale=1">-->
-	<meta name="viewport" content="width=device-width, initial-scale=0.7, minimum-scale=0.7, maximum-scale=0.7">
+	<meta name="viewport" content="width=device-width, initial-scale=0.7, maximum-scale=0.7, user-scalable=no">
 	
 	<title>Home WSN</title>
 	
     <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.4/jquery.mobile-1.4.4.min.css" />
-	<link rel="stylesheet" href="styleWSN.css" type="text/css" />
+	<link rel="stylesheet" href="css/styleWSN.css" type="text/css" />
 </head> 
  
 <body>
     <!-- ******************* Page 1 ***************** -->
-    <div data-role="page" id="page1">
+    <!-- data-ajax="false" avoid losing elements when back button is pressed when already logged in. -->
+    <div data-role="page" id="page1" data-ajax=”false”>
 	    <div data-role="header">
 		    <div data-role="navbar">
                 <ul>
@@ -30,7 +31,7 @@
 	    </div>
 	    
 	    <div data-role="footer" data-position="fixed">
-		    <img id="logo-footer" src="logo32.png" />
+		    <img id="logo-footer" src="images/logo32.png" />
 		    <h1 id="title-footer">Pipo WSN </h1>
 		    <span id="connectionStatus"></span>
 	    </div>
@@ -39,7 +40,8 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" type="text/javascript"></script>
     <script src="http://code.jquery.com/mobile/1.4.4/jquery.mobile-1.4.4.min.js"></script>
     <script src="https://cdn.socket.io/socket.io-1.1.0.js"></script>
-	<script src="clientWSN.js" type="text/javascript"></script>
+	<script src="js/clientWSN.js" type="text/javascript"></script>
+	<script src="js/touche.js" type="text/javascript"></script><!--Remove 300ms delay on safari-->
 </body>
 
 </html>
