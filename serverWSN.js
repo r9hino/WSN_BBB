@@ -30,6 +30,8 @@ var cronTime = require('cron').CronTime;
 var SerialPort = require('serialport').SerialPort;
 var xbee_api = require('xbee-api');
 var ThingSpeakClient = require('thingspeakclient');
+var compression = require('compression');
+var minify = require('express-minify');
 var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 var logger = require('morgan');
@@ -88,6 +90,8 @@ var app = express();
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
+//app.use(compression());
+//app.use(minify({cache: __dirname + '/public/cache'}));
 app.use(favicon(__dirname + '/public/images/favicon.ico'));
 app.use(logger('dev'));
 app.use(cookieParser());
@@ -100,7 +104,10 @@ app.use(expressSession({ secret: 'keyboard cat' , saveUninitialized: true,  resa
 app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(express.static(__dirname + '/public'));
+app.use(express.static(__dirname + '/public', {
+    etag: true,
+    maxage: 0
+}));
 
 // Express routes definition.
 var routes = require('./app_routes/routes')(passport, jsonWSN);
@@ -154,7 +161,7 @@ for (var devId in jsonWSN) {
 var io = require('socket.io')(server, {
     pingInterval: 7000,
     pingTimeout: 16000,
-    transports: ['xhr-polling', 'websocket', 'flashsocket', 'polling']
+    transports: ['polling', 'websocket', 'flashsocket', 'xhr-polling']
 });
 
 // Listen to changes made from the clients control panel.

@@ -33,7 +33,7 @@ $(document).ready(function(){
         // When client connects/reconnects, retrieve json file with the system state.
         socket.on('jsonWSN', function (jsonServerData) { 
             $controlPanel.empty();  // Empty the div
-            
+
             for (var devId in jsonServerData) {
     		    var name = jsonServerData[devId].name;
     		    var switchValue = jsonServerData[devId].switchValue;
@@ -60,7 +60,7 @@ $(document).ready(function(){
         });
     });
 
-    
+
     /* Send data to server.
         Use .on() method when working with dynamically created buttons.
         Handles clicks/changes events and send new states to the server.*/
@@ -152,7 +152,7 @@ $(document).ready(function(){
             timerTimeout = setTimeout(disconnectOnTimeout, 45000);
         }
     });
-    $(window).on('blur', windowBlur);
+    //$(window).on('blur', windowBlur);
     $(window).on('focus', windowFocus);
     //$(window).focusin(windowFocus);
     //$(window).focusout(windowBlur);    // Se active cambiando de pagina internamente
@@ -172,7 +172,10 @@ $(document).ready(function(){
     }
     
     function windowFocus() {
-        socket.io.reconnect();
+        // If control panel is disabled, focus will try to reconnect.
+        if ($controlPanel.hasClass('ui-state-disabled')) {
+            socket.io.reconnect();
+        }
     }
 });
 
