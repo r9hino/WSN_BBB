@@ -2,7 +2,7 @@
     Client side script for handling WSN devices.
 */
 
-$(document).ready(function(){
+$(document).on("pagecreate", function(){
 
     // Jquery variables.
     var $controlPanel = $('#controlPanel');
@@ -28,7 +28,7 @@ $(document).ready(function(){
 
         // Disconnect from server after # seconds. Reconnection occurs when user clicks on grayed background.        
         timerTimeout = null;
-        timerTimeout = setTimeout(disconnectOnTimeout, 45000);
+        timerTimeout = setTimeout(disconnectOnTimeout, 2*60000);
 
         // When client connects/reconnects, retrieve json file with the system state.
         socket.on('jsonWSN', function (jsonServerData) { 

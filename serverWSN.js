@@ -179,7 +179,7 @@ io.sockets.on('connection', function (socket) {
     // Listen for changes made by user on browser/client side. Then update system state.
     socket.on('elementChanged', updateSystemState);
     
-    // Update system state based on clientData property values sended by client's browsers.
+    // Update system state based on clientData values sended by client's browsers.
     // clientData format is: {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime}
     function updateSystemState (clientData){
         var devId = clientData.id;
@@ -194,11 +194,19 @@ io.sockets.on('connection', function (socket) {
         // Depend on device type (pin or xbee), a different function will control the device.
         if (data.type === 'pin')  bbb.digitalWrite(data.pin, data.switchValue);
         else if (data.type === 'xbee') {
-            if(data.switchValue === 1) xbee.sendRemoteATCmdReq(data.xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
-            else xbee.sendRemoteATCmdReq(data.xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
+            if (data.switchValue === 1) {
+                xbee.sendRemoteATCmdReq(data.xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
+                // Only for testing purpose MCU+Xbee
+                if (data.xbee === 'xbee3') xbee.ZBTransmitRequest(data.xbee, 'on');
+            }
+            else {
+                xbee.sendRemoteATCmdReq(data.xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
+                // Only for testing purpose MCU+Xbee
+                if (data.xbee === 'xbee3') xbee.ZBTransmitRequest(data.xbee, 'off');
+            }
         }        
 
-    
+
         console.log(dateTime() +
                     "  Name: " + data.name +
                     ",  Switch value: " + data.switchValue +
@@ -246,18 +254,26 @@ io.sockets.on('connection', function (socket) {
 
 // Xbee frame receiver. The frame type determine which function is called.
 xbeeAPI.on("frame_object", function(frame) {
-    var frameType = frame.type;
-    
-    switch (frameType) {
+    switch (frame.type) {
+        // ZigBee IO Data Sample Rx Indicator.
+        case 0x8B:
+            xbee.ZBTransmitStatus(frame);
+            break;
+        // ZigBee IO Data Sample Rx Indicator.
+        case 0x90:
+            xbee.ZBReceivePacket(frame);
+            break;
         // ZigBee IO Data Sample Rx Indicator.
         case 0x92:
             xbee.ZBIODataSampleRx(frame);
             break;
+        // After a Remote AT Cmd Request, module respond with a Remote AT Cmd response 
         case 0x97:
             xbee.remoteCmdResponse(frame);
             break;
         default:
             console.log("Not defined frame type: ");
+            frame.type = "0x" + frame.type.toString(16);
             console.log(frame);
             break;
     }
