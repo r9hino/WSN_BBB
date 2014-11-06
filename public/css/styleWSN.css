@@ -30,7 +30,7 @@
 #logo-footer {
     position: relative;
     float: left;
-    margin-left: 37%;
+    margin-left: 35%;
     margin-top: 5px;
     /*margin-left: 0 auto;
     margin-right: 0 auto;*/
@@ -43,6 +43,6 @@
 #connectionStatus {
     position: relative; 
     float: right;
-    margin-right: 5%;
+    margin-right: 3%;
     margin-top: 12px;
 }

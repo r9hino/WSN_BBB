@@ -8,6 +8,9 @@ $(document).on("pagecreate", function(){
     var $controlPanel = $('#controlPanel');
     var $connectionStatus = $('#connectionStatus');
 
+    // Global variables.
+    var guiActiveTime = 1*60*1000;  // Miliseconds.
+
     var socket = io.connect('pipobbb.mooo.com:8888',{
         rememberUpgrade: true,
         transports: ['xhr-polling', 'websocket', 'flashsocket', 'polling']
@@ -26,9 +29,9 @@ $(document).on("pagecreate", function(){
         // When connection is established, enable all control elements if previously disabled.
         $controlPanel.removeClass("ui-state-disabled");
 
-        // Disconnect from server after # seconds. Reconnection occurs when user clicks on grayed background.        
+        // Disconnect from server after 'guiActiveTime' seconds. Reconnection occurs when user clicks on grayed background.        
         timerTimeout = null;
-        timerTimeout = setTimeout(disconnectOnTimeout, 2*60000);
+        timerTimeout = setTimeout(disconnectOnTimeout, guiActiveTime);
 
         // When client connects/reconnects, retrieve json file with the system state.
         socket.on('jsonWSN', function (jsonServerData) { 
@@ -124,7 +127,7 @@ $(document).on("pagecreate", function(){
 		console.log('Disconnect socket status: ', socket.io.engine);
     });
     // Update connection status.
-    socket.on('reconnecting', function(){
+    socket.on('reconnect', function(){
         $connectionStatus.text('Reconnecting');
 		$connectionStatus.css('color', '#2356e1');
 		console.log('Reconnect socket status: ', socket.io.engine);
@@ -133,23 +136,24 @@ $(document).on("pagecreate", function(){
 
     function disconnectOnTimeout() {
         // Close connection after # seconds.
-        socket.io.close();
+        //socket.io.close();
+        socket.io.disconnect();
         // Disable all control panel input elements. Grayed background. Re-enable it in reconnection.
         $controlPanel.addClass('ui-state-disabled');
     }
     $(window).on('click', function(){
-        //console.log(document.hasFocus());
         // If control panel is disabled, clicking in grayed background return connection to server.
         if ($controlPanel.hasClass('ui-state-disabled')) {
-            socket.io.reconnect();
+            //console.log(socket);
+            socket.io.connect();
         }
         // If control panel is available, then each click reset setTimeout's timer.
         // I.E. disconnection will occur # seconds after last click.
         else {
             clearTimeout(timerTimeout);
             timerTimeout = null;
-            // Disconnect from server after # seconds. Reconnection occurs when user clicks on grayed background.        
-            timerTimeout = setTimeout(disconnectOnTimeout, 45000);
+            // Disconnect from server after 'guiActiveTime' seconds. Reconnection occurs when user clicks on grayed background.        
+            timerTimeout = setTimeout(disconnectOnTimeout, guiActiveTime);
         }
     });
     //$(window).on('blur', windowBlur);
@@ -174,12 +178,7 @@ $(document).on("pagecreate", function(){
     function windowFocus() {
         // If control panel is disabled, focus will try to reconnect.
         if ($controlPanel.hasClass('ui-state-disabled')) {
-            socket.io.reconnect();
+            socket.io.connect();
         }
     }
 });
-
-// socket.io.close();
-// socket.socket.disconnect();
-// socket.socket.reconnect();
-// socket = io.connect(hostname, {forceNew: true});

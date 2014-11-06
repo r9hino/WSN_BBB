@@ -49,7 +49,7 @@ var xbeeAPI = new xbee_api.XBeeAPI({
 });
 var C = xbee_api.constants;   // xbee-api constants
 var serialport = new SerialPort("/dev/ttyO2", {
-    baudrate: 9600,
+    baudrate: 115200,
     parser: xbeeAPI.rawParser()
 });
 var xbeeWSN = require('./lib/xbeeWSN');
@@ -99,8 +99,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(methodOverride());
 app.use(expressSession({ secret: 'keyboard cat' , saveUninitialized: true,  resave: true }));
-// Initialize Passport!  Also use passport.session() middleware, to support
-// persistent login sessions (recommended).
+// Initialize Passport!  Also use passport.session() middleware, to support persistent login sessions (recommended).
 app.use(flash());
 app.use(passport.initialize());
 app.use(passport.session());
@@ -133,7 +132,7 @@ function schedulerJobInitialization (devId) {
         jsonWSN[devId].switchValue = 1;
         // Depend on device type (pin or xbee), a different function will control the device.
         if (jsonWSN[devId].type === 'pin')  bbb.digitalWrite(jsonWSN[devId].pin, 1);
-        else if (jsonWSN[devId].type === 'xbee') xbee.sendRemoteATCmdReq(jsonWSN[devId].xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
+        else if (jsonWSN[devId].type === 'xbee') xbee.remoteATCmdReq(jsonWSN[devId].xbee, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
         
         console.log(dateTime() + '  Automatic on: ' + jsonWSN[devId].name);
         io.sockets.emit('updateClients', jsonWSN[devId]);
@@ -173,7 +172,7 @@ io.sockets.on('connection', function (socket) {
         console.log(dateTime() + '  IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
-    // Send jsonWSN data to client when connection occurs.
+    // Send jsonWSN data to client at the beginning of connection.
     socket.emit('jsonWSN', jsonWSN);
     
     // Listen for changes made by user on browser/client side. Then update system state.
@@ -195,14 +194,19 @@ io.sockets.on('connection', function (socket) {
         if (data.type === 'pin')  bbb.digitalWrite(data.pin, data.switchValue);
         else if (data.type === 'xbee') {
             if (data.switchValue === 1) {
-                xbee.sendRemoteATCmdReq(data.xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
+                xbee.remoteATCmdReq(data.xbee, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
                 // Only for testing purpose MCU+Xbee
-                if (data.xbee === 'xbee3') xbee.ZBTransmitRequest(data.xbee, 'on');
+                if (data.xbee === 'xbee3') {
+                    xbee.ZBTransmitRequest(data.xbee, '123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J');
+                }
             }
             else {
-                xbee.sendRemoteATCmdReq(data.xbee, C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
+                xbee.remoteATCmdReq(data.xbee, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
                 // Only for testing purpose MCU+Xbee
-                if (data.xbee === 'xbee3') xbee.ZBTransmitRequest(data.xbee, 'off');
+                if (data.xbee === 'xbee3') {
+                    xbee.ZBTransmitRequest(data.xbee, 'off');
+                    xbee.remoteATCmdReq(data.xbee, 'NP', 0);
+                }
             }
         }        
 
@@ -213,13 +217,13 @@ io.sockets.on('connection', function (socket) {
                     ",  AutoMode value: " + data.autoMode +
                     ",  AutoTime value: " + data.autoTime +
                     ",  Pin: " + data.pin);
-    
+
         // Broadcast new system state to everyone.
         io.emit('updateClients', data);
         // Broadcast new system state to everyone except for the socket that starts it.
         //socket.broadcast.emit('updateClients', data);
-    
-    
+
+
         // Start scheduler only if autoMode is 1 and device is off.
         // Pointless to start scheduler if device is already on.
         // Check that autoTime is not an empty string or undefined, otherwise server will stop working.
@@ -229,7 +233,7 @@ io.sockets.on('connection', function (socket) {
             // First convert to integer: "02" -> 2. Then convert to string again: 2 -> "2".
             var hourStr = parseInt(autoTimeSplit[0], 10).toString();
             var minuteStr = parseInt(autoTimeSplit[1], 10).toString();
-    
+
             // Set new scheduler values.
             schedulerTime[devId].source = '0 '+minuteStr+' '+hourStr+' * * *';
             schedulerTime[devId].hour = {};
@@ -241,8 +245,8 @@ io.sockets.on('connection', function (socket) {
             schedulerJob[devId].start();
         }
         else schedulerJob[devId].stop();
-    
-    
+
+
         // Store new values into json file infoWSN.json
         fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
             if(err) console.log(err);
@@ -287,7 +291,7 @@ function writeThingSpeak () {
     var fieldsUpdate = {
         field1: (xbee.sensorData['xbee1'].tempAccum/xbee.sensorData['xbee1'].sampleNum).toFixed(2),
         field2: (xbee.sensorData['xbee2'].tempAccum/xbee.sensorData['xbee2'].sampleNum).toFixed(2),
-        field3: (xbee.sensorData['xbee3'].tempAccum/xbee.sensorData['xbee3'].sampleNum).toFixed(2)
+        field3: xbee.sensorData['xbee3'].t
     };
     console.log(fieldsUpdate);
     thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp) {
