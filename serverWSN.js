@@ -24,6 +24,7 @@ var express = require('express');
 //var server = app.listen(8888); 
 //var io = require('socket.io').listen(server);
 var fs = require('fs');
+var Q = require('q');
 var bbb = require('bonescript');
 var cronJob = require('cron').CronJob;
 var cronTime = require('cron').CronTime;
@@ -164,7 +165,7 @@ var io = require('socket.io')(server, {
 });
 
 // Listen to changes made from the clients control panel.
-io.sockets.on('connection', function (socket) {
+io.on('connection', function (socket) {
     var connectIP = socket.client.conn.remoteAddress;
     console.log(dateTime() + '  IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
     socket.on('disconnect', function() {
@@ -177,6 +178,7 @@ io.sockets.on('connection', function (socket) {
     
     // Listen for changes made by user on browser/client side. Then update system state.
     socket.on('elementChanged', updateSystemState);
+
     
     // Update system state based on clientData values sended by client's browsers.
     // clientData format is: {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime}
@@ -205,7 +207,6 @@ io.sockets.on('connection', function (socket) {
                 // Only for testing purpose MCU+Xbee
                 if (data.xbee === 'xbee3') {
                     xbee.ZBTransmitRequest(data.xbee, 'off');
-                    xbee.remoteATCmdReq(data.xbee, 'NP', 0);
                 }
             }
         }        
@@ -252,9 +253,117 @@ io.sockets.on('connection', function (socket) {
             if(err) console.log(err);
             //else console.log("JSON file saved at " + jsonFileName);
         });
-    }
-});
+    }   // End of updateSystemState() function.
 
+
+
+
+
+    // Listen for xbee command request
+    //var xbeeCmdObj = {xbee: '', xbeeCommand: ''}; // Must be defined here so it can be available in socket.on() and xbeeAPI.on() handlers.
+    socket.on('xbeeClientCmdReq', function(xbeeCmdObj) {
+        /*  Second version */
+        var maxWait = 4000;
+        
+        // xbeeIdReq: Requested xbee id from client. xbeeCmdReq: Requested xbee cmd from client.
+        function xbeeClientCmdHandler (xbeeIdReq, xbeeCmdReq) {
+            xbee.remoteATCmdReq(xbeeIdReq, xbeeCmdReq, 0);
+            
+            // We're going to return a promise
+            var deferred = Q.defer();
+            
+            var callback = function(receivedFrame) {
+                var xbeeIdResp = xbee.getXbeeKeyByAddress(receivedFrame.remote64);
+                var xbeeCmdResp = receivedFrame.command;
+                
+                // Check to see if remoteCmdResponse frame correspond to client's requested one.
+                if ((receivedFrame.type === 0x97) && (xbeeIdResp === xbeeIdReq) && (xbeeCmdResp === xbeeCmdReq)) {
+                    receivedFrame.type = '0x97';
+                    receivedFrame.xbeeId = xbeeIdResp;
+                    // This is our frame's response. Resolve the promise.
+                    deferred.resolve(receivedFrame);
+                }
+            };
+
+            // Clear up: remove listener after the timeout and a bit, it's no longer needed
+            setTimeout(function() {
+                xbeeAPI.removeListener("frame_object", callback);
+            }, maxWait + 1000);
+
+            // Attach callback so we're waiting for the response
+            xbeeAPI.on("frame_object", callback);
+  
+            // Return our promise with a timeout
+            return deferred.promise.timeout(maxWait);
+        }
+        
+        xbeeClientCmdHandler(xbeeCmdObj.xbeeId, xbeeCmdObj.xbeeCmd)
+        .then(function(frame) {
+            socket.emit('cmdResponseFrame', frame);
+            //console.log("Command successful:", frame);
+        }).catch(function(e) {
+            console.log("Command failed:", e);
+        });
+
+        
+        /*  First version
+        var xbeeIdReq = xbeeCmdObj.xbeeId;  // Requested xbee id from client.
+        var xbeeCmdReq = xbeeCmdObj.xbeeCmd;   // Requested xbee cmd from client.
+        xbee.remoteATCmdReq(xbeeIdReq, xbeeCmdReq, 0);
+        socket.emit('cmdResponseFrame', xbeeCmdReq);
+        
+        xbeeAPI.on("frame_object", function(frame) {
+            var xbeeIdResp = xbee.getXbeeKeyByAddress(frame.remote64);
+            var xbeeCmdResp = frame.command;
+            
+            // Check to see if remoteCmdResponse frame correspond to client's requested one.
+            if ((frame.type === 0x97) && (xbeeIdResp === xbeeIdReq) && (xbeeCmdResp === xbeeCmdReq)) {
+                frame.type = '0x97';
+                frame.xbeeId = xbeeIdResp;
+                console.log(frame);
+                socket.emit('cmdResponseFrame', frame);
+            }
+        });
+        */
+        
+        /* Third version
+        //var xbeeIdReq = xbeeCmdObj.xbeeId;  // Requested xbee id from client.
+        //var xbeeCmdReq = xbeeCmdObj.xbeeCmd;   // Requested xbee cmd from client.
+        
+        function xbeeClientCmdHandler (xbeeIdReq, xbeeCmdReq) {
+            xbee.remoteATCmdReq(xbeeIdReq, xbeeCmdReq, 0);
+            
+            // We're going to return a promise
+            var deferred = Q.defer();
+    
+            xbeeAPI.on("frame_object", function(frame) {
+                var xbeeIdResp = xbee.getXbeeKeyByAddress(frame.remote64);
+                var xbeeCmdResp = frame.command;
+                
+                // Check to see if remoteCmdResponse frame correspond to client's requested one.
+                if ((frame.type === 0x97) && (xbeeIdResp === xbeeIdReq) && (xbeeCmdResp === xbeeCmdReq)) {
+                    frame.type = '0x97';
+                    frame.xbeeId = xbeeIdResp;
+                    console.log(frame);
+                    deferred.resolve(frame);
+                    //socket.emit('cmdResponseFrame', frame);
+                    //return frame;
+                }
+            });
+            return deferred.promise
+        }
+        
+        xbeeClientCmdHandler(xbeeCmdObj.xbeeId, xbeeCmdObj.xbeeCmd)
+        .then(function(frame) {
+            socket.emit('cmdResponseFrame', frame);
+            //console.log("Command successful:", frame);
+        }).catch(function(e) {
+            console.log("Command failed:", e);
+        });
+        */
+    });
+
+});
 
 // Xbee frame receiver. The frame type determine which function is called.
 xbeeAPI.on("frame_object", function(frame) {

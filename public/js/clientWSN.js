@@ -60,8 +60,43 @@ $(document).on("pagecreate", function(){
     			$controlPanel.trigger('create');
     			updateDynamicallyAddedButtons(devId, switchValue, autoMode, autoTime);
     		}
+
+
+
+
+    		// Create xbee remote command request gui.
+            var optionSelectString = '';
+            for (var devId in jsonServerData) {
+                if (jsonServerData[devId].type === 'xbee') {
+                    var xbeeId = jsonServerData[devId].xbee;
+                    optionSelectString += '<option value="' + xbeeId + '">' + xbeeId + '</option>';
+                }
+            }
+    		$controlPanel.append(
+    		'<div class="ui-field-contain">\
+                <select name="select-xbee" id="select-xbee">\
+    		        ' + optionSelectString + '\
+                </select>\
+                <input type="text" name="text-xbee-cmd" id="text-xbee-cmd" value="" placeholder="Xbee Command">\
+                <button class="ui-btn ui-btn-inline ui-mini ui-corner-all" id="xbee-cmd-send">Send Command</button>\
+            </div>\
+            <div id="frame-text-div">\
+            </div>'
+            );
         });
     });
+    
+    $controlPanel.on('click', '#xbee-cmd-send', function () {
+        var xbeeIdSelect = $("#select-xbee option:selected").val()
+        var xbeeCmdReq = $('#text-xbee-cmd').val();
+        var xbeeCmdObj = {'xbeeId': xbeeIdSelect, 'xbeeCmd': xbeeCmdReq};
+        socket.emit('xbeeClientCmdReq', xbeeCmdObj);  // Now client must wait for command response.
+    });
+    socket.on('cmdResponseFrame', function (frameResponse) {
+        console.log(JSON.stringify(frameResponse, null, 4));
+        $('#frame-text-div').html(JSON.stringify(frameResponse, null, 4));
+    });
+    //$controlPanel.trigger('create');
 
 
     /* Send data to server.
@@ -100,6 +135,8 @@ $(document).on("pagecreate", function(){
 
     // Update buttons status (colors) based on system state.
     function updateDynamicallyAddedButtons(devId, switchValue, autoMode, autoTime){
+        // To avoid re-executing event handler .on() 'change', changeHandler function is turned off
+        // when control panel data arrive from server side.
         $controlPanel.off('change', '.dynamic', changeHandler);
 
         // Turn on or off switch checkbox.
