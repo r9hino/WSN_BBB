@@ -73,24 +73,20 @@ $(document).on("pagecreate", function(){
                 }
             }
     		$controlPanel.append(
-    		'<div class="ui-field-contain">\
-    		    <select id="select-xbee">\
+    		'<div class="ui-field-contain" id="remoteATCmdReq-gui">\
+    		    <select id="select-xbee" data-mini="true" data-inline="true">\
     		        ' + optionSelectString + '\
                 </select>\
-                <div class="horizontal-text">\
-                    <input type="text" id="text-xbee-cmd" value="" placeholder="Xbee Cmd" size="8">\
-                </div>\
-                <div class="horizontal-text">\
-                    <input type="text" id="text-xbee-param" value="" placeholder="Parameter" size="8">\
-                </div>\
-                <div class="horizontal-button">\
-                    <button class="ui-btn ui-btn-inline ui-mini ui-corner-all" id="xbee-cmd-send">Send</button>\
-                </div>\
+                <input type="text" id="text-xbee-cmd" value="" placeholder="Xbee Cmd" size="8">\
+                <input type="text" id="text-xbee-param" value="" placeholder="Parameter" size="8">\
+                <button class="ui-btn ui-btn-inline ui-mini ui-corner-all" id="xbee-cmd-send">Send</button>\
             </div>\
             <div id="frame-text-div">\
             </div>'
             );
             $controlPanel.trigger('create');
+            $('#remoteATCmdReq-gui').find('.ui-select').addClass('horizontal-select'); // This way css can choose only this select input.
+            $('#remoteATCmdReq-gui').find('.ui-input-text').addClass('horizontal-text'); // This way css can choose only this text inputs.
         });
     });
     

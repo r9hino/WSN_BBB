@@ -1,6 +1,7 @@
 @charset "UTF-8";
 /* CSS Document */
 
+
 /* Control Panel css ---------------------------------------------------------*/
 .horizontal-checkbox {
     position: relative;
@@ -27,38 +28,32 @@
     text-shadow: 0 1px 0 #f3f3f3 !important;
 }
 
+
+
 /* Remote AT Command Request gui css -----------------------------------------*/
-/* Define width of select menu*/
-.ui-select {
+/* Define width of select menu. horizontal-select class was added using Jquery*/
+.ui-select.horizontal-select {
     float: left;
-    top: -13px;
-    width: 110px !important;
+    top: -6px;
 }
 
-/* Define text input width size*/
-.ui-input-text{
-    width: 90px !important;
-}
-
-/*.horizontal-select {
-    position: relative;
-    margin-left: 4%;
-    top: 20px;
-}*/
-
-.horizontal-text {
+/* Define text input width size. horizontal-text class was added using Jquery*/
+.ui-input-text.horizontal-text {
     position: relative;
     float: left;
     margin-left: 4%;
     top: -10px;
+    width: 90px !important;
 }
 
-.horizontal-button {
+#xbee-cmd-send {
     position: relative;
     float: left;
     margin-left: 4%;
     top: -7px;
 }
+
+
 
 /* Logo and info on footer css. index.html and sensordata.html require it-----*/
 #logo-footer {
