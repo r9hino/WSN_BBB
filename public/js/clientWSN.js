@@ -64,7 +64,7 @@ $(document).on("pagecreate", function(){
 
 
 
-    		// Create xbee remote command request gui.
+    		// Create xbee remote AT command request gui form.
             var optionSelectString = '';
             for (var devId in jsonServerData) {
                 if (jsonServerData[devId].type === 'xbee') {
@@ -74,19 +74,27 @@ $(document).on("pagecreate", function(){
             }
     		$controlPanel.append(
     		'<div class="ui-field-contain">\
-                <select name="select-xbee" id="select-xbee">\
+    		    <select id="select-xbee">\
     		        ' + optionSelectString + '\
                 </select>\
-                <input type="text" name="text-xbee-cmd" id="text-xbee-cmd" value="" placeholder="Xbee Cmd" size="8">\
-                <input type="text" name="text-xbee-param" id="text-xbee-param" value="" placeholder="Parameter" size="8">\
-                <button class="ui-btn ui-btn-inline ui-mini ui-corner-all" id="xbee-cmd-send">Send</button>\
+                <div class="horizontal-text">\
+                    <input type="text" id="text-xbee-cmd" value="" placeholder="Xbee Cmd" size="8">\
+                </div>\
+                <div class="horizontal-text">\
+                    <input type="text" id="text-xbee-param" value="" placeholder="Parameter" size="8">\
+                </div>\
+                <div class="horizontal-button">\
+                    <button class="ui-btn ui-btn-inline ui-mini ui-corner-all" id="xbee-cmd-send">Send</button>\
+                </div>\
             </div>\
             <div id="frame-text-div">\
             </div>'
             );
+            $controlPanel.trigger('create');
         });
     });
     
+    // Handle remote AT command request gui interactions.
     $controlPanel.on('click', '#xbee-cmd-send', function () {
         var xbeeIdReq = $("#select-xbee option:selected").val()
         var xbeeCmdReq = $('#text-xbee-cmd').val();
@@ -94,11 +102,11 @@ $(document).on("pagecreate", function(){
         var xbeeCmdObj = {'xbeeId': xbeeIdReq, 'xbeeCmd': xbeeCmdReq, 'xbeeParam': xbeeParamReq};
         socket.emit('xbeeClientCmdReq', xbeeCmdObj);  // Now client must wait for command response.
     });
+    // Receive frame response from server to the remote AT command request gui.
     socket.on('cmdResponseFrame', function (frameResponse) {
         //console.log(JSON.stringify(frameResponse, null, 4));
         $('#frame-text-div').html('<pre><code>'+JSON.stringify(frameResponse, null, 4)+'</code></pre>');
     });
-    //$controlPanel.trigger('create');
 
 
     /* Send data to server.

@@ -259,7 +259,7 @@ io.on('connection', function (socket) {
 
 
 
-    // Listen for client xbee command request.
+    // Listen for client xbee remote AT command request.
     socket.on('xbeeClientCmdReq', function(xbeeCmdObj) {
         var maxWait = 1500;
         
