@@ -77,8 +77,9 @@ $(document).on("pagecreate", function(){
                 <select name="select-xbee" id="select-xbee">\
     		        ' + optionSelectString + '\
                 </select>\
-                <input type="text" name="text-xbee-cmd" id="text-xbee-cmd" value="" placeholder="Xbee Command">\
-                <button class="ui-btn ui-btn-inline ui-mini ui-corner-all" id="xbee-cmd-send">Send Command</button>\
+                <input type="text" name="text-xbee-cmd" id="text-xbee-cmd" value="" placeholder="Xbee Cmd" size="8">\
+                <input type="text" name="text-xbee-param" id="text-xbee-param" value="" placeholder="Parameter" size="8">\
+                <button class="ui-btn ui-btn-inline ui-mini ui-corner-all" id="xbee-cmd-send">Send</button>\
             </div>\
             <div id="frame-text-div">\
             </div>'
@@ -87,14 +88,15 @@ $(document).on("pagecreate", function(){
     });
     
     $controlPanel.on('click', '#xbee-cmd-send', function () {
-        var xbeeIdSelect = $("#select-xbee option:selected").val()
+        var xbeeIdReq = $("#select-xbee option:selected").val()
         var xbeeCmdReq = $('#text-xbee-cmd').val();
-        var xbeeCmdObj = {'xbeeId': xbeeIdSelect, 'xbeeCmd': xbeeCmdReq};
+        var xbeeParamReq = $('#text-xbee-param').val();
+        var xbeeCmdObj = {'xbeeId': xbeeIdReq, 'xbeeCmd': xbeeCmdReq, 'xbeeParam': xbeeParamReq};
         socket.emit('xbeeClientCmdReq', xbeeCmdObj);  // Now client must wait for command response.
     });
     socket.on('cmdResponseFrame', function (frameResponse) {
-        console.log(JSON.stringify(frameResponse, null, 4));
-        $('#frame-text-div').html(JSON.stringify(frameResponse, null, 4));
+        //console.log(JSON.stringify(frameResponse, null, 4));
+        $('#frame-text-div').html('<pre><code>'+JSON.stringify(frameResponse, null, 4)+'</code></pre>');
     });
     //$controlPanel.trigger('create');
 
