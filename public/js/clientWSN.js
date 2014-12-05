@@ -68,6 +68,7 @@ $(document).on("pagecreate", function(){
             var optionSelectString = '';
             // First option is to broadcast a command.
             optionSelectString += '<option value="broadcast">broadcast</option>';
+            optionSelectString += '<option value="coordinator">coordinator</option>';
             for (var devId in jsonServerData) {
                 if (jsonServerData[devId].type === 'xbee') {
                     var xbeeId = jsonServerData[devId].xbee;
@@ -92,7 +93,7 @@ $(document).on("pagecreate", function(){
         });
     });
     
-    // Handle remote AT command request gui interactions.
+    // Handle local and remote AT command request gui interactions.
     $controlPanel.on('click', '#xbee-cmd-send', function () {
         var xbeeIdReq = $("#select-xbee option:selected").val()
         var xbeeCmdReq = $('#text-xbee-cmd').val();

@@ -212,7 +212,6 @@ io.on('connection', function (socket) {
             }
         }        
 
-
         console.log(dateTime() +
                     "  Name: " + data.name +
                     ",  Switch value: " + data.switchValue +
@@ -248,7 +247,6 @@ io.on('connection', function (socket) {
         }
         else schedulerJob[devId].stop();
 
-
         // Store new values into json file infoWSN.json
         fs.writeFile(jsonFileName, JSON.stringify(jsonWSN, null, 4), function (err) {
             if(err) console.log(err);
@@ -270,20 +268,21 @@ io.on('connection', function (socket) {
         // xbeeCmdReq: Requested xbee cmd from client.
         function xbeeClientCmdHandler(xbeeIdReq, xbeeCmdReq, xbeeParamReq){
             var frameId = xbeeAPI.nextFrameId();
-            xbee.remoteATCmdReq(xbeeIdReq, frameId, xbeeCmdReq, xbeeParamReq);
+            // If xbeeIdReq is a broadcast signal or a remote xbee module, use remoteATCmdReq().
+            if(xbeeIdReq !== 'coordinator') xbee.remoteATCmdReq(xbeeIdReq, frameId, xbeeCmdReq, xbeeParamReq);
+            else xbee.ATCmdReq(frameId, xbeeCmdReq, xbeeParamReq);  // If coordinator was selected, send a local cmd req.
             
             // We're going to return a promise. Wait and handle remoteATCmdReq response when it arrive.
             var deferred = Q.defer();
             
             var callback = function(receivedFrame){
-                console.log(receivedFrame.id, frameId);
+                //console.log(receivedFrame.id, frameId);
                 var xbeeIdResp = xbee.getXbeeKeyByAddress(receivedFrame.remote64);
                 var xbeeCmdResp = receivedFrame.command;
                 
                 // Check to see if remoteCmdResponse frame correspond to client's requested one.
                 if(receivedFrame.id === frameId){
-                    console.log('weeeee');
-                    receivedFrame.type = '0x97';
+                    receivedFrame.type = '0x' + receivedFrame.type.toString(16);
                     receivedFrame.xbeeId = xbeeIdResp;
                     receivedFrame.commandData = '[' + receivedFrame.commandData.toString() + ']';
                     // This is our frame's response. Resolve the promise.
@@ -317,8 +316,12 @@ io.on('connection', function (socket) {
 });
 
 // Xbee frame receiver. The frame type determine which function is called.
-xbeeAPI.on("frame_object", function(frame) {
-    switch (frame.type) {
+xbeeAPI.on("frame_object", function(frame){
+    switch (frame.type){
+        // AT Command Response.
+        case 0x88:
+            xbee.ATCmdResponse(frame);
+            break;
         // ZigBee IO Data Sample Rx Indicator.
         case 0x8B:
             xbee.ZBTransmitStatus(frame);
@@ -346,7 +349,7 @@ xbeeAPI.on("frame_object", function(frame) {
 // Update ThingSpeak database each 5 minutes.
 setInterval(writeThingSpeak, 5*60*1000);
 
-function writeThingSpeak () {
+function writeThingSpeak(){
     // Create object with temperature averages.
     var fieldsUpdate = {
         field1: (xbee.sensorData['xbee1'].tempAccum/xbee.sensorData['xbee1'].sampleNum).toFixed(2),
