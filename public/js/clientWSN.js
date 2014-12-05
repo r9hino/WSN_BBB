@@ -9,7 +9,7 @@ $(document).on("pagecreate", function(){
     var $connectionStatus = $('#connectionStatus');
 
     // Global variables.
-    var guiActiveTime = 1*60*1000;  // Miliseconds.
+    var guiActiveTime = 3*60*1000;  // Miliseconds.
 
     var socket = io.connect('pipobbb.mooo.com:8888',{
         rememberUpgrade: true,
@@ -66,6 +66,8 @@ $(document).on("pagecreate", function(){
 
     		// Create xbee remote AT command request gui form.
             var optionSelectString = '';
+            // First option is to broadcast a command.
+            optionSelectString += '<option value="broadcast">broadcast</option>';
             for (var devId in jsonServerData) {
                 if (jsonServerData[devId].type === 'xbee') {
                     var xbeeId = jsonServerData[devId].xbee;

@@ -29,7 +29,7 @@ var bbb = require('bonescript');
 var cronJob = require('cron').CronJob;
 var cronTime = require('cron').CronTime;
 var SerialPort = require('serialport').SerialPort;
-var xbee_api = require('xbee-api');
+var xbee_api = require('/var/lib/cloud9/xbee-api');
 var ThingSpeakClient = require('thingspeakclient');
 var compression = require('compression');
 var minify = require('express-minify');
@@ -133,7 +133,7 @@ function schedulerJobInitialization (devId) {
         jsonWSN[devId].switchValue = 1;
         // Depend on device type (pin or xbee), a different function will control the device.
         if (jsonWSN[devId].type === 'pin')  bbb.digitalWrite(jsonWSN[devId].pin, 1);
-        else if (jsonWSN[devId].type === 'xbee') xbee.remoteATCmdReq(jsonWSN[devId].xbee, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
+        else if (jsonWSN[devId].type === 'xbee') xbee.remoteATCmdReq(jsonWSN[devId].xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
         
         console.log(dateTime() + '  Automatic on: ' + jsonWSN[devId].name);
         io.sockets.emit('updateClients', jsonWSN[devId]);
@@ -196,14 +196,15 @@ io.on('connection', function (socket) {
         if (data.type === 'pin')  bbb.digitalWrite(data.pin, data.switchValue);
         else if (data.type === 'xbee') {
             if (data.switchValue === 1) {
-                xbee.remoteATCmdReq(data.xbee, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
+                xbee.remoteATCmdReq(data.xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
                 // Only for testing purpose MCU+Xbee
-                if (data.xbee === 'xbee3') {
-                    xbee.ZBTransmitRequest(data.xbee, '123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J');
+                if (data.xbee === 'xbee3') {    //'123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J'
+                    xbee.ZBTransmitRequest(data.xbee, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+                                                      
                 }
             }
             else {
-                xbee.remoteATCmdReq(data.xbee, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
+                xbee.remoteATCmdReq(data.xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
                 // Only for testing purpose MCU+Xbee
                 if (data.xbee === 'xbee3') {
                     xbee.ZBTransmitRequest(data.xbee, 'off');
@@ -260,22 +261,28 @@ io.on('connection', function (socket) {
 
 
     // Listen for client xbee remote AT command request.
-    socket.on('xbeeClientCmdReq', function(xbeeCmdObj) {
+    socket.on('xbeeClientCmdReq', function(xbeeCmdObj){
+        //console.log(xbeeCmdObj);
         var maxWait = 1500;
         
-        // xbeeIdReq: Requested xbee id from client. xbeeCmdReq: Requested xbee cmd from client.
-        function xbeeClientCmdHandler (xbeeIdReq, xbeeCmdReq, xbeeParamReq) {
-            xbee.remoteATCmdReq(xbeeIdReq, xbeeCmdReq, xbeeParamReq);
+        // Handle custom command request from client browsers.
+        // xbeeIdReq: Requested xbee id from client (broadcast, xbee1, xbee2...). 
+        // xbeeCmdReq: Requested xbee cmd from client.
+        function xbeeClientCmdHandler(xbeeIdReq, xbeeCmdReq, xbeeParamReq){
+            var frameId = xbeeAPI.nextFrameId();
+            xbee.remoteATCmdReq(xbeeIdReq, frameId, xbeeCmdReq, xbeeParamReq);
             
-            // We're going to return a promise
+            // We're going to return a promise. Wait and handle remoteATCmdReq response when it arrive.
             var deferred = Q.defer();
             
-            var callback = function(receivedFrame) {
+            var callback = function(receivedFrame){
+                console.log(receivedFrame.id, frameId);
                 var xbeeIdResp = xbee.getXbeeKeyByAddress(receivedFrame.remote64);
                 var xbeeCmdResp = receivedFrame.command;
                 
                 // Check to see if remoteCmdResponse frame correspond to client's requested one.
-                if ((receivedFrame.type === 0x97) && (xbeeIdResp === xbeeIdReq) && (xbeeCmdResp === xbeeCmdReq)) {
+                if(receivedFrame.id === frameId){
+                    console.log('weeeee');
                     receivedFrame.type = '0x97';
                     receivedFrame.xbeeId = xbeeIdResp;
                     receivedFrame.commandData = '[' + receivedFrame.commandData.toString() + ']';
@@ -284,9 +291,11 @@ io.on('connection', function (socket) {
                 }
             };
 
+            // There could be multiple responses when using a broadcasted cmd, so maxWait must be incremented.
+            if(xbeeIdReq === 'broadcast') maxWait = maxWait + 2000;
             // Clear up: remove listener after the timeout and a bit, it's no longer needed.
             // This way we avoid having multiple xbeeAPI.on() listener (avoid memory leak).
-            setTimeout(function() {
+            setTimeout(function(){
                 xbeeAPI.removeListener("frame_object", callback);
             }, maxWait + 100);
 
