@@ -18,16 +18,20 @@ module.exports = function(passport, jsonWSN){
         res.render('index', { jsonWSN: jsonWSN });
     });
 
+    router.get('/admin', ensureAuthenticated, function(req, res){
+        res.render('admin');
+    });
+
     router.get('/sensordata', ensureAuthenticated, function(req, res){
         res.render('sensordata');
     });
 
     router.get('/login', function(req, res){
         // If user is already logged, then redirect him to /index page.
-        if(req.user) {
+        if(req.user){
             res.redirect('/');
         }
-        else {
+        else{
             res.render('login', { user: req.user, message: req.flash('error') });
         }
     });

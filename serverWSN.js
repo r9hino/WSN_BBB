@@ -165,7 +165,7 @@ var io = require('socket.io')(server, {
 });
 
 // Listen to changes made from the clients control panel.
-io.on('connection', function (socket) {
+io.on('connection', function(socket){
     var connectIP = socket.client.conn.remoteAddress;
     console.log(dateTime() + '  IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
     socket.on('disconnect', function() {
@@ -178,8 +178,6 @@ io.on('connection', function (socket) {
     
     // Listen for changes made by user on browser/client side. Then update system state.
     socket.on('elementChanged', updateSystemState);
-
-    
     // Update system state based on clientData values sended by client's browsers.
     // clientData format is: {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime}
     function updateSystemState (clientData){
@@ -200,7 +198,6 @@ io.on('connection', function (socket) {
                 // Only for testing purpose MCU+Xbee
                 if (data.xbee === 'xbee3') {    //'123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J'
                     xbee.ZBTransmitRequest(data.xbee, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-                                                      
                 }
             }
             else {
@@ -272,7 +269,7 @@ io.on('connection', function (socket) {
             if(xbeeIdReq !== 'coordinator') xbee.remoteATCmdReq(xbeeIdReq, frameId, xbeeCmdReq, xbeeParamReq);
             else xbee.ATCmdReq(frameId, xbeeCmdReq, xbeeParamReq);  // If coordinator was selected, send a local cmd req.
             
-            // We're going to return a promise. Wait and handle remoteATCmdReq response when it arrive.
+            // We're going to return a promise and handle ATCmdReq and remoteATCmdReq response when they arrive.
             var deferred = Q.defer();
             
             var callback = function(receivedFrame){
