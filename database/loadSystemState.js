@@ -57,29 +57,29 @@ function loadSystemState() {
     };
 
     // Load system state from jsonWSN.json file.
-    try {
+    try{
         // If file exists, initialize states.
         var fileData = fs.readFileSync(jsonFileName);
         jsonWSN = JSON.parse(fileData);
         console.log("System state loaded successfully.");
     }
-    
-    catch (e) {
+
+    catch(e){
         console.log(e);
         // Here you get the error when the file was not found.
-        if (e.code === 'ENOENT') {
+        if (e.code === 'ENOENT'){
             console.log("JSON file doesn't exist. It will be created now...");
             fs.writeFileSync(jsonFileName, JSON.stringify(jsonWSN, null, 4));
             console.log("JSON created and saved to " + jsonFileName);
         }
         // File exist but is empty.
-        else if (e.code === undefined) {
+        else if(e.code === undefined){
             console.log("File exists but is empty. Using initial configuration...");
             fs.writeFileSync(jsonFileName, JSON.stringify(jsonWSN, null, 4));
             console.log("JSON saved to " + jsonFileName);
         }
         // Any other error.
-        else {
+        else{
             console.log("Error reading/loading JSON file.");
             console.log(e.code);
             throw e;

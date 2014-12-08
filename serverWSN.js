@@ -70,7 +70,7 @@ initDevices(jsonWSN, bbb, xbee);
 
 // ThingSpeak initialization.
 var thingspeak = new ThingSpeakClient();
-thingspeak.attachChannel(11818, { writeKey:'1EQD8TANGANJHA3J'}, function () {
+thingspeak.attachChannel(11818, { writeKey:'1EQD8TANGANJHA3J'}, function(){
     console.log('Thingspeak client ready.');
 });
 
@@ -91,7 +91,7 @@ var app = express();
 
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
-//app.use(compression());
+app.use(compression());
 //app.use(minify({cache: __dirname + '/public/cache'}));
 app.use(favicon(__dirname + '/public/images/favicon.ico'));
 app.use(logger('dev'));
@@ -125,10 +125,10 @@ var server = app.listen(8888);
 var schedulerTime = {};
 var schedulerJob = {};
 
-function schedulerTimeInitialization (devId) {
+function schedulerTimeInitialization(devId){
     return new cronTime('', null);
 }
-function schedulerJobInitialization (devId) {
+function schedulerJobInitialization(devId){
     return new cronJob('', function(){
         jsonWSN[devId].switchValue = 1;
         // Depend on device type (pin or xbee), a different function will control the device.
@@ -148,7 +148,7 @@ function schedulerJobInitialization (devId) {
     );
 }
 
-for (var devId in jsonWSN) {
+for (var devId in jsonWSN){
     schedulerTime[devId] = schedulerTimeInitialization(devId);
     schedulerJob[devId] = schedulerJobInitialization(devId);
 }
@@ -353,7 +353,7 @@ function writeThingSpeak(){
         field2: (xbee.sensorData['xbee2'].tempAccum/xbee.sensorData['xbee2'].sampleNum).toFixed(2),
         field3: xbee.sensorData['xbee3'].t
     };
-    console.log(fieldsUpdate);
+    //console.log(fieldsUpdate);
     thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp) {
         if (err || resp <= 0) {
             console.log('An error ocurred while updating ThingSpeak.');

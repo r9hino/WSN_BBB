@@ -18,20 +18,12 @@ $(document).on("pagecreate", function(){
 
     console.time('connection');    
     // Each time client connects/reconnects, it requests the system state to the server
-    // Warning: maybe we have to include 'reconnect' event...
     socket.on('connect',function(){
         console.timeEnd('connection');
-
         console.log('Connect socket status: ', socket.io.engine);
-        // Update connection status.
-        $connectionStatus.text('Online');
-		$connectionStatus.css('color', 'green');
-        // When connection is established, enable all control elements if previously disabled.
-        $adminPanel.removeClass("ui-state-disabled");
-
-        // Disconnect from server after 'guiActiveTime' seconds. Reconnection occurs when user clicks on grayed background.        
-        timerTimeout = null;
-        timerTimeout = setTimeout(disconnectOnTimeout, guiActiveTime);
+        
+        // Enable graphical user interface GUI.
+        enableGUI();
 
         // When client connects/reconnects, retrieve json file with the system state.
         socket.on('jsonWSN', function (jsonServerData){ 
@@ -67,7 +59,7 @@ $(document).on("pagecreate", function(){
     });
     
     // Handle local and remote AT command request gui interactions.
-    $adminPanel.on('click', '#xbee-cmd-send', function () {
+    $adminPanel.on('click', '#xbee-cmd-send', function(){
         var xbeeIdReq = $("#select-xbee option:selected").val()
         var xbeeCmdReq = $('#text-xbee-cmd').val();
         var xbeeParamReq = $('#text-xbee-param').val();
@@ -85,28 +77,18 @@ $(document).on("pagecreate", function(){
     socket.on('disconnect', function(reason){
         $connectionStatus.text('Offline ' + reason);
 		$connectionStatus.css('color', 'red');
-		console.log('Disconnect socket status: ', socket.io.engine);
     });
     // Update connection status.
     socket.on('reconnect', function(){
         $connectionStatus.text('Reconnecting');
 		$connectionStatus.css('color', '#2356e1');
-		console.log('Reconnect socket status: ', socket.io.engine);
     });
 
-
-    function disconnectOnTimeout(){
-        // Close connection after # seconds.
-        //socket.io.close();
-        socket.io.disconnect();
-        // Disable all control panel input elements. Grayed background. Re-enable it in reconnection.
-        $adminPanel.addClass('ui-state-disabled');
-    }
     $(window).on('click', function(){
         // If admin panel is disabled, clicking in grayed background return connection to server.
         if($adminPanel.hasClass('ui-state-disabled')){
-            //console.log(socket);
-            socket.io.connect();
+            socket.io.skipReconnect = false;
+            socket.io.reconnect();
         }
         // If control panel is available, then each click reset setTimeout's timer.
         // I.E. disconnection will occur # seconds after last click.
@@ -129,15 +111,35 @@ $(document).on("pagecreate", function(){
         clearTimeout(timerTimeout);
         timerTimeout = null;
         // On window losing focus, disconnect from server.
-        socket.io.close();
+        socket.io.disconnect();
         // Disable all control panel input elements. Grayed background. It will be re-enable in reconnection.
         $adminPanel.addClass('ui-state-disabled');
     }
     
     function windowFocus(){
         // If control panel is disabled, focus will try to reconnect.
-        if ($adminPanel.hasClass('ui-state-disabled')) {
-            socket.io.connect();
+        if ($adminPanel.hasClass('ui-state-disabled')){
+            socket.io.skipReconnect = false;
+            socket.io.reconnect();
         }
+    }
+    
+    function enableGUI(){
+        // Update connection status.
+        $connectionStatus.text('Online');
+		$connectionStatus.css('color', 'green');
+        // When connection is established, enable all control elements if previously disabled.
+        $adminPanel.removeClass("ui-state-disabled");
+
+        // Disconnect from server after 'guiActiveTime' seconds. Reconnection occurs when user clicks on grayed background.        
+        timerTimeout = null;
+        timerTimeout = setTimeout(disconnectOnTimeout, guiActiveTime);
+    }
+    
+    function disconnectOnTimeout(){
+        // Close connection after # seconds.
+        socket.io.disconnect();
+        // Disable all control panel input elements. Grayed background. Re-enable it in reconnection.
+        $adminPanel.addClass('ui-state-disabled');
     }
 });
