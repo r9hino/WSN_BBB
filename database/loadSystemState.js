@@ -1,13 +1,13 @@
 var fs = require('fs');
 
-// Load to memory the system state from infoWSN.json file.
-// If any error occur trying to load infoWSN.json file, use default one defined here as jsonWSN.
-function loadSystemState() {
+// Load to memory the system state from systemState.json file.
+// If any error occur trying to load systemState.json file, use default one defined here as jsonWSN.
+function loadSystemState(){
    
-   var jsonFileName = __dirname + "/infoWSN.json";
+   var jsonFileName = __dirname + "/systemState.json";
     
-    // This json will be loaded only if there doesn't exist an infoWSN.json file.
-    // i.e. if it is the first time running the script, or if infoWSN.json was previewsly deleted.
+    // This json will be loaded only if there doesn't exist an systemState.json file.
+    // i.e. if it is the first time running the script, or if systemState.json was previewsly deleted.
     var jsonWSN = {
         "dev0": {
             "id":"dev0",
@@ -56,11 +56,11 @@ function loadSystemState() {
         }
     };
 
-    // Load system state from jsonWSN.json file.
+    // Load system state from systemState.json file.
     try{
         // If file exists, initialize states.
         var fileData = fs.readFileSync(jsonFileName);
-        jsonWSN = JSON.parse(fileData);
+        jsonSystemState = JSON.parse(fileData);
         console.log("System state loaded successfully.");
     }
 
@@ -69,13 +69,13 @@ function loadSystemState() {
         // Here you get the error when the file was not found.
         if (e.code === 'ENOENT'){
             console.log("JSON file doesn't exist. It will be created now...");
-            fs.writeFileSync(jsonFileName, JSON.stringify(jsonWSN, null, 4));
+            fs.writeFileSync(jsonFileName, JSON.stringify(jsonSystemState, null, 4));
             console.log("JSON created and saved to " + jsonFileName);
         }
         // File exist but is empty.
         else if(e.code === undefined){
             console.log("File exists but is empty. Using initial configuration...");
-            fs.writeFileSync(jsonFileName, JSON.stringify(jsonWSN, null, 4));
+            fs.writeFileSync(jsonFileName, JSON.stringify(jsonSystemState, null, 4));
             console.log("JSON saved to " + jsonFileName);
         }
         // Any other error.
@@ -86,7 +86,7 @@ function loadSystemState() {
         }
     }
 
-    return jsonWSN;
+    return jsonSystemState;
 }
 
 module.exports = loadSystemState;

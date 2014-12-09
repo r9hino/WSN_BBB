@@ -40,7 +40,7 @@
         "type": "xbee",
         "xbee": "xbee3",
         "name": "Xbee Free",
-        "switchValue": 0,
+        "switchValue": 1,
         "autoMode": 0,
         "autoTime": ""
     }

@@ -26,7 +26,7 @@ $(document).on("pagecreate", function(){
         enableGUI();
 
         // When client connects/reconnects, retrieve json file with the system state.
-        socket.on('jsonWSN', function (jsonServerData){ 
+        socket.on('jsonSystemState', function (jsonServerData){ 
             $adminPanel.empty();  // Empty the div.
 
     		// Create xbee remote AT command request gui form.

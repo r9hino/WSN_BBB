@@ -27,7 +27,7 @@ $(document).on("pagecreate", function(){
         enableGUI();
         
         // When client connects/reconnects, retrieve json file with the system state.
-        socket.on('jsonWSN', function(jsonServerData){
+        socket.on('jsonSystemState', function(jsonServerData){
             $controlPanel.empty();  // Empty the div
 
             for(var devId in jsonServerData){
