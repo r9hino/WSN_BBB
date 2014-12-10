@@ -12,9 +12,9 @@ function ensureAuthenticated(req, res, next) {
     res.redirect('/login');
 }
 
-module.exports = function(passport, jsonWSN){
+module.exports = function(passport, jsonSystemState){
     router.get('/', ensureAuthenticated, function(req, res){
-        res.render('index', { jsonWSN: jsonWSN });
+        res.render('index', { jsonSystemState: jsonSystemState });
     });
 
     router.get('/admin', ensureAuthenticated, function(req, res){

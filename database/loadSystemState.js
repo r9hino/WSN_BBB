@@ -59,6 +59,7 @@ function loadSystemState(){
     // Load system state from systemState.json file.
     try{
         // If file exists, initialize states.
+        console.log('Loading preview system state...');
         var fileData = fs.readFileSync(jsonFileName);
         jsonSystemState = JSON.parse(fileData);
         console.log("System state loaded successfully.");

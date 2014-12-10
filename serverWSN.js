@@ -20,10 +20,14 @@ require('nodetime').profile({
 });
 
 var express = require('express');
-//var app = express();
-//var server = app.listen(8888); 
-//var io = require('socket.io').listen(server);
 var fs = require('fs');
+/*var d = require('domain').create();
+d.on('error', function(er){
+    console.log(er);
+    console.error(er);
+    process.exit(1);
+});
+d.run(function(){*/
 var Q = require('q');
 var bbb = require('bonescript');
 var cronJob = require('cron').CronJob;
@@ -43,42 +47,26 @@ var methodOverride = require('method-override');
 var favicon = require('serve-favicon');
 var flash = require('connect-flash');  
 
-
-// Serialport and xbee initialization.
-var xbeeAPI = new xbee_api.XBeeAPI({
-    api_mode: 2
-});
-var C = xbee_api.constants;   // xbee-api constants
-var serialport = new SerialPort("/dev/ttyO2", {
-    baudrate: 115200,
-    parser: xbeeAPI.rawParser()
-});
-var xbeeWSN = require('./lib/xbeeWSN');
-var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
-//xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in the xbee network and store the 16bit address.
-
-
-// Load system state.
-var loadSystemState = require('./database/loadSystemState');
-var jsonSystemState = loadSystemState();    // Load to memory system's state from systemState.json file.
-var jsonFileName = __dirname + "/database/systemState.json";
-
-
-// Initialize devices to the preview system state.
-var initDevices = require('./lib/initDevices');
-initDevices(jsonSystemState, bbb, xbee);
-
-
-// ThingSpeak initialization.
-var thingspeak = new ThingSpeakClient();
-thingspeak.attachChannel(11818, { writeKey:'1EQD8TANGANJHA3J'}, function(){
-    console.log('Thingspeak client ready.');
-});
-
-
 // Date instance for logging date and time.
 var dateTime = require('./lib/dateTime');
 
+// Xbee RX and TX functions.
+var xbeeWSN = require('./lib/xbeeWSN');
+
+// Allow to initialize devices to the preview system state.
+var initDevices = require('./lib/initDevices');
+
+// Load preview system state.
+var jsonFileName = __dirname + "/database/systemState.json";
+var loadSystemState = require('./database/loadSystemState');
+var jsonSystemState = loadSystemState();    // Load to memory system's state from systemState.json file.
+
+// ThingSpeak initialization.
+var thingspeak = new ThingSpeakClient();
+thingspeak.attachChannel(11818, {writeKey:'1EQD8TANGANJHA3J'}, function(error){
+    if(error)   return console.log('ThingSpeak client ' + error);
+    console.log('Thingspeak client ready.');
+});
 
 //******************************************************************************
 // Passport, Express and Routes configuration
@@ -87,7 +75,6 @@ var dateTime = require('./lib/dateTime');
 require('./app_routes/initPassport')(passport);
 
 //var app = require('./app_routes/app')();
-
 var app = express();
 
 app.set('views', __dirname + '/views');
@@ -114,9 +101,44 @@ app.use(express.static(__dirname + '/public', {
 var routes = require('./app_routes/routes')(passport, jsonSystemState);
 app.use('/', routes);
 
-
 //var app = require('./app_routes/app');
 var server = app.listen(8888); 
+
+//io.engine.transports = ['websocket', 'polling'];
+var io = require('socket.io')(server, {
+    pingInterval: 7000,
+    pingTimeout: 16000,
+    transports: ['polling', 'websocket', 'flashsocket', 'xhr-polling']
+});
+
+
+//******************************************************************************
+// Wireless Sensor Network Initialization.
+
+// Serialport and xbee initialization.
+var xbeeAPI = new xbee_api.XBeeAPI({
+    api_mode: 2
+});
+var C = xbee_api.constants;   // xbee-api constants
+var serialport = new SerialPort("/dev/ttyO2", {
+    baudrate: 115200,
+    bufferSize: 1024,
+    parser: xbeeAPI.rawParser()
+});
+
+var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
+console.log("Start WSN nodes discovery...");
+xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in the xbee network and store the 16bit address.
+
+// Initialize local and remote devices.
+//initDevices(jsonSystemState, bbb, xbee);
+
+// Wait for node discovery to complete to initialize local and remote devices.    
+setTimeout(function(){
+    // Initialize local and remote devices.
+    initDevices(jsonSystemState, bbb, xbee);
+}, 10000);
+
 
 
 //******************************************************************************
@@ -139,8 +161,8 @@ function schedulerJobInitialization(devId){
         console.log(dateTime() + '  Automatic on: ' + jsonSystemState[devId].name);
         io.sockets.emit('updateClients', jsonSystemState[devId]);
         // Store new values into json file systemState.json
-        fs.writeFile(jsonFileName, JSON.stringify(jsonSystemState, null, 4), function (err) {
-            if(err) console.log(err);
+        fs.writeFile(jsonFileName, JSON.stringify(jsonSystemState, null, 4), function(err){
+            if(err) return console.log(err);
         });
     },
     null,   // Function execute after finishing the scheduler.
@@ -156,15 +178,6 @@ for(var devId in jsonSystemState){
 
 //******************************************************************************
 // Socket connection handlers
-//io.set('transports', ['websocket', 'flashsocket', 'htmlfile', 'xhr-polling', 'jsonp-polling', 'polling']);
-//io.engine.transports = ['websocket', 'polling'];
-
-var io = require('socket.io')(server, {
-    pingInterval: 7000,
-    pingTimeout: 16000,
-    transports: ['polling', 'websocket', 'flashsocket', 'xhr-polling']
-});
-
 // Listen to changes made from the clients control panel.
 io.on('connection', function(socket){
     var connectIP = socket.client.conn.remoteAddress;
@@ -225,7 +238,7 @@ io.on('connection', function(socket){
         // Start scheduler only if autoMode is 1 and device is off.
         // Pointless to start scheduler if device is already on.
         // Check that autoTime is not an empty string or undefined, otherwise server will stop working.
-        if((data.switchValue === 0) && (data.autoMode === 1) && (data.autoTime !== "")) {
+        if((data.switchValue === 0) && (data.autoMode === 1) && (data.autoTime !== "")){
             // Retrieve hours and minutes from client sended data.
             var autoTimeSplit = data.autoTime.split(":");
             // First convert to integer: "02" -> 2. Then convert to string again: 2 -> "2".
@@ -310,29 +323,18 @@ io.on('connection', function(socket){
 xbeeAPI.on("frame_object", function(frame){
     switch (frame.type){
         // AT Command Response.
-        case 0x88:
-            xbee.ATCmdResponse(frame);
-            break;
+        case 0x88: xbee.ATCmdResponse(frame); break;
         // ZigBee Transmit Status acknowledgement for the ZigBee Transmit Request.
-        case 0x8B:
-            xbee.ZBTransmitStatus(frame);
-            break;
+        case 0x8B: xbee.ZBTransmitStatus(frame); break;
         // ZigBee Receive Packet handler for a remote ZigBee Transmit Request.
-        case 0x90:
-            xbee.ZBReceivePacket(frame);
-            break;
+        case 0x90: xbee.ZBReceivePacket(frame); break;
         // ZigBee IO Data Sample Rx Indicator.
-        case 0x92:
-            xbee.ZBIODataSampleRx(frame);
-            break;
+        case 0x92: xbee.ZBIODataSampleRx(frame); break;
         // After a Remote AT Cmd Request, module respond with a Remote AT Cmd Response.
-        case 0x97:
-            xbee.remoteCmdResponse(frame);
-            break;
+        case 0x97: xbee.remoteCmdResponse(frame); break;
         default:
             console.log("Not defined frame type: 0x" + frame.type.toString(16));
-            console.log(frame);
-            break;
+            console.log(frame); break;
     }
 });
 
@@ -347,17 +349,25 @@ function writeThingSpeak(){
         field3: xbee.sensorData['xbee3'].t
     };
     //console.log(fieldsUpdate);
-    thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp) {
-        if (err || resp <= 0) {
+    thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp){
+        if(err || resp <= 0){
             console.log('An error ocurred while updating ThingSpeak.');
         }
         // else console.log('Update successfully. Entry number was: ' + resp);
     });
     
     // Restore sensorData object for new measurements.
-    for (var xbeeKey in xbee.sensorDataAccum) {
+    for(var xbeeKey in xbee.sensorDataAccum){
         xbee.sensorData[xbeeKey].tempAccum = 0;
         xbee.sensorData[xbeeKey].sampleNum = 0;
     }
-    
 }
+
+process.on('uncaughtException', function(er){
+  console.error(er.stack);
+  console.log(er.stack);
+  process.exit(1);
+});
+
+
+//});//d domain
