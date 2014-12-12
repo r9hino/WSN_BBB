@@ -130,6 +130,16 @@ var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
 console.log("Start WSN nodes discovery...");
 xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in the xbee network and store the 16bit address.
 
+/*serialport.open(function(err){
+    if(err) return console.log(err);
+    console.log("open");
+    serialport.on('data', function(error, data){
+        if(error) console.log("Error - " + error);
+        console.log('data received: ' + data);
+        //sys.puts("here: "+data);
+    });
+});*/
+  
 // Initialize local and remote devices.
 //initDevices(jsonSystemState, bbb, xbee);
 
@@ -151,12 +161,13 @@ var schedulerJob = {};
 function schedulerTimeInitialization(devId){
     return new cronTime('', null);
 }
+// This is what is going to be executed when the cron time arrive.
 function schedulerJobInitialization(devId){
     return new cronJob('', function(){
         jsonSystemState[devId].switchValue = 1;
         // Depend on device type (pin or xbee), a different function will control the device.
-        if (jsonSystemState[devId].type === 'pin')  bbb.digitalWrite(jsonSystemState[devId].pin, 1);
-        else if (jsonSystemState[devId].type === 'xbee') xbee.remoteATCmdReq(jsonSystemState[devId].xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
+        if(jsonSystemState[devId].type === 'pin')  bbb.digitalWrite(jsonSystemState[devId].pin, 1);
+        else if(jsonSystemState[devId].type === 'xbee') xbee.remoteATCmdReq(jsonSystemState[devId].xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
         
         console.log(dateTime() + '  Automatic on: ' + jsonSystemState[devId].name);
         io.sockets.emit('updateClients', jsonSystemState[devId]);
@@ -165,7 +176,7 @@ function schedulerJobInitialization(devId){
             if(err) return console.log(err);
         });
     },
-    null,   // Function execute after finishing the scheduler.
+    null,   // Function to be executed when the job stops.
     false,  // Start the job right now true/false.
     null    // Timezone.
     );
@@ -179,7 +190,8 @@ for(var devId in jsonSystemState){
 //******************************************************************************
 // Socket connection handlers
 // Listen to changes made from the clients control panel.
-io.on('connection', function(socket){
+io.on('connection', socketConnection);
+function socketConnection(socket){
     var connectIP = socket.client.conn.remoteAddress;
     console.log(dateTime() + '  IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
     socket.on('disconnect', function(){
@@ -194,7 +206,7 @@ io.on('connection', function(socket){
     socket.on('elementChanged', updateSystemState);
     // Update system state based on clientData values sended by client's browsers.
     // clientData format is: {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime}
-    function updateSystemState (clientData){
+    function updateSystemState(clientData){
         var devId = clientData.id;
         // Store received data in JSON object.
         jsonSystemState[devId].switchValue = clientData.switchValue;
@@ -316,12 +328,12 @@ io.on('connection', function(socket){
             console.log("Command failed:", e);
         });
     });     // socket.on('xbeeClientCmdReq', function(xbeeCmdObj){}) end.
-});         // io.on('connection', function(socket){}) end.
+}           // function socketConnection() end.
 
 
 // Xbee frame receiver. The frame type determine which function is called.
 xbeeAPI.on("frame_object", function(frame){
-    switch (frame.type){
+    switch(frame.type){
         // AT Command Response.
         case 0x88: xbee.ATCmdResponse(frame); break;
         // ZigBee Transmit Status acknowledgement for the ZigBee Transmit Request.
@@ -332,8 +344,10 @@ xbeeAPI.on("frame_object", function(frame){
         case 0x92: xbee.ZBIODataSampleRx(frame); break;
         // After a Remote AT Cmd Request, module respond with a Remote AT Cmd Response.
         case 0x97: xbee.remoteCmdResponse(frame); break;
+        // After a Many-to-One request, a Route Record Indicator will be received for each module.
+        case 0xA1: xbee.routeRecordIndicator(frame); break;
         default:
-            console.log("Not defined frame type: 0x" + frame.type.toString(16));
+            console.log("Not defined frame type: 0x" + frame.type.toString(16).toUpperCase());
             console.log(frame); break;
     }
 });
