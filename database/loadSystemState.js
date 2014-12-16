@@ -1,4 +1,4 @@
-var fs = require('fs');
+var fs = require('graceful-fs');
 
 // Load to memory the system state from systemState.json file.
 // If any error occur trying to load systemState.json file, use default one defined here as jsonWSN.
@@ -8,7 +8,7 @@ function loadSystemState(){
     
     // This json will be loaded only if there doesn't exist an systemState.json file.
     // i.e. if it is the first time running the script, or if systemState.json was previewsly deleted.
-    var jsonWSN = {
+    var jsonSystemState = {
         "dev0": {
             "id":"dev0",
             "type": "pin",

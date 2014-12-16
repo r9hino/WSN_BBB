@@ -3,7 +3,6 @@
 */
 
 $(document).on("pagecreate", function(){
-
     // Jquery variables.
     var $controlPanel = $('#controlPanel');
     var $connectionStatus = $('#connectionStatus');
@@ -145,12 +144,7 @@ $(document).on("pagecreate", function(){
     });
     //$(window).on('blur', windowBlur);
     $(window).on('focus', windowFocus);
-    //$(window).focusin(windowFocus);
-    //$(window).focusout(windowBlur);    // Se active cambiando de pagina internamente
     
-    //$(window).blur(windowBlur);  // No se activa al cambiar de pagina internamente
-    //$(window).focus(windowFocus);
-
     // Phone Chrome doesn't detect .blur() events, others browsers do. Waiting for some patches.
     function windowBlur(){
         // Clear timer to avoid another disconnection on timeout.

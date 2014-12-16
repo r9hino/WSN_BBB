@@ -18,22 +18,17 @@ require('nodetime').profile({
     accountKey: 'e54a03c529e0fcfa708e33d960d219579411194d', 
     appName: 'serverWSN.js'
 });
+var SegfaultHandler = require('segfault-handler');
+SegfaultHandler.registerHandler();
 
 var express = require('express');
-var fs = require('fs');
-/*var d = require('domain').create();
-d.on('error', function(er){
-    console.log(er);
-    console.error(er);
-    process.exit(1);
-});
-d.run(function(){*/
+var fs = require('graceful-fs');
 var Q = require('q');
 var bbb = require('bonescript');
-var cronJob = require('cron').CronJob;
-var cronTime = require('cron').CronTime;
+var cronJob = require('/var/lib/cloud9/WSN/custom_modules/cron').CronJob;
+var cronTime = require('/var/lib/cloud9/WSN/custom_modules/cron').CronTime;
 var SerialPort = require('serialport').SerialPort;
-var xbee_api = require('/var/lib/cloud9/xbee-api');
+var xbee_api = require('/var/lib/cloud9/WSN/custom_modules/xbee-api');
 var ThingSpeakClient = require('thingspeakclient');
 var compression = require('compression');
 var minify = require('express-minify');
@@ -67,6 +62,34 @@ thingspeak.attachChannel(11818, {writeKey:'1EQD8TANGANJHA3J'}, function(error){
     if(error)   return console.log('ThingSpeak client ' + error);
     console.log('Thingspeak client ready.');
 });
+
+//******************************************************************************
+// Wireless Sensor Network Initialization.
+
+// Serialport and xbee initialization.
+var xbeeAPI = new xbee_api.XBeeAPI({
+    api_mode: 2
+});
+var C = xbee_api.constants;   // xbee-api constants
+var serialport = new SerialPort("/dev/ttyO2", {
+    baudrate: 115200,
+    bufferSize: 1024,
+    parser: xbeeAPI.rawParser()
+});
+
+var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
+console.log("Start WSN nodes discovery...");
+xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in the xbee network and store the 16bit address.
+
+// Initialize local and remote devices.
+//initDevices(jsonSystemState, bbb, xbee);
+
+// Wait for node discovery to complete to initialize local and remote devices.    
+setTimeout(function(){
+    // Initialize local and remote devices.
+    initDevices(jsonSystemState, bbb, xbee);
+}, 10000);
+
 
 //******************************************************************************
 // Passport, Express and Routes configuration
@@ -111,81 +134,37 @@ var io = require('socket.io')(server, {
     transports: ['polling', 'websocket', 'flashsocket', 'xhr-polling']
 });
 
-
 //******************************************************************************
-// Wireless Sensor Network Initialization.
+// Scheduler objects initialization
+var schedulerJob = [];
 
-// Serialport and xbee initialization.
-var xbeeAPI = new xbee_api.XBeeAPI({
-    api_mode: 2
-});
-var C = xbee_api.constants;   // xbee-api constants
-var serialport = new SerialPort("/dev/ttyO2", {
-    baudrate: 115200,
-    bufferSize: 1024,
-    parser: xbeeAPI.rawParser()
-});
-
-var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
-console.log("Start WSN nodes discovery...");
-xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in the xbee network and store the 16bit address.
-
-/*serialport.open(function(err){
-    if(err) return console.log(err);
-    console.log("open");
-    serialport.on('data', function(error, data){
-        if(error) console.log("Error - " + error);
-        console.log('data received: ' + data);
-        //sys.puts("here: "+data);
-    });
-});*/
-  
-// Initialize local and remote devices.
-//initDevices(jsonSystemState, bbb, xbee);
-
-// Wait for node discovery to complete to initialize local and remote devices.    
-setTimeout(function(){
-    // Initialize local and remote devices.
-    initDevices(jsonSystemState, bbb, xbee);
-}, 10000);
-
-
-
-//******************************************************************************
-// Schedulers jobs initialization
-
-// Two function initializer where create in order to avoid closure ambiguity.
-var schedulerTime = {};
-var schedulerJob = {};
-
-function schedulerTimeInitialization(devId){
-    return new cronTime('', null);
+function initScheduler(){
+    for(var devId in jsonSystemState){
+        schedulerJob[devId] = new cronJob('', null, null, false, null); // Just create the objects.
+    }
 }
 // This is what is going to be executed when the cron time arrive.
-function schedulerJobInitialization(devId){
-    return new cronJob('', function(){
-        jsonSystemState[devId].switchValue = 1;
-        // Depend on device type (pin or xbee), a different function will control the device.
-        if(jsonSystemState[devId].type === 'pin')  bbb.digitalWrite(jsonSystemState[devId].pin, 1);
-        else if(jsonSystemState[devId].type === 'xbee') xbee.remoteATCmdReq(jsonSystemState[devId].xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
-        
-        console.log(dateTime() + '  Automatic on: ' + jsonSystemState[devId].name);
-        io.sockets.emit('updateClients', jsonSystemState[devId]);
-        // Store new values into json file systemState.json
-        fs.writeFile(jsonFileName, JSON.stringify(jsonSystemState, null, 4), function(err){
-            if(err) return console.log(err);
-        });
-    },
-    null,   // Function to be executed when the job stops.
-    false,  // Start the job right now true/false.
-    null    // Timezone.
-    );
+function jobAutoOn(devId){
+    jsonSystemState[devId].switchValue = 1;
+    // Depend on device type (pin or xbee), a different function will control the device.
+    if(jsonSystemState[devId].type === 'pin')  bbb.digitalWrite(jsonSystemState[devId].pin, 1);
+    else if(jsonSystemState[devId].type === 'xbee') xbee.remoteATCmdReq(jsonSystemState[devId].xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
+    
+    console.log(dateTime() + '  Automatic on: ' + jsonSystemState[devId].name);
+    io.sockets.emit('updateClients', jsonSystemState[devId]);
+    // Store new values into json file systemState.json
+    fs.writeFile(jsonFileName, JSON.stringify(jsonSystemState, null, 4), function(err){
+        if(err) return console.log(err);
+    });
 }
+initScheduler();
 
-for(var devId in jsonSystemState){
-    schedulerTime[devId] = schedulerTimeInitialization(devId);
-    schedulerJob[devId] = schedulerJobInitialization(devId);
-}
+/*setTimeout(function(){
+    initScheduler();
+    io.on('connection', socketConnection);
+    console.log("Server is ready to listen.");
+}, 11000);
+*/
 
 //******************************************************************************
 // Socket connection handlers
@@ -251,21 +230,18 @@ function socketConnection(socket){
         // Pointless to start scheduler if device is already on.
         // Check that autoTime is not an empty string or undefined, otherwise server will stop working.
         if((data.switchValue === 0) && (data.autoMode === 1) && (data.autoTime !== "")){
-            // Retrieve hours and minutes from client sended data.
+            // Retrieve hours and minutes from client received data.
             var autoTimeSplit = data.autoTime.split(":");
             // First convert to integer: "02" -> 2. Then convert to string again: 2 -> "2".
             var hourStr = parseInt(autoTimeSplit[0], 10).toString();
             var minuteStr = parseInt(autoTimeSplit[1], 10).toString();
 
             // Set new scheduler values.
-            schedulerTime[devId].source = '0 '+minuteStr+' '+hourStr+' * * *';
-            schedulerTime[devId].hour = {};
-            schedulerTime[devId].minute = {};
-            schedulerTime[devId].hour[hourStr] = true;
-            schedulerTime[devId].minute[minuteStr] = true;
-            schedulerJob[devId].setTime(schedulerTime[devId]);
-            console.log("Auto on: "+schedulerJob[devId].nextDate()+"  "+data.name);
+            var myCronTime = new cronTime('0 ' + minuteStr + ' ' + hourStr + ' * * *', null);
+            schedulerJob[devId].setTime(myCronTime);
+            schedulerJob[devId].setCallback(jobAutoOn.bind(this, devId));   // Set job/function to be execute on cron tick.
             schedulerJob[devId].start();
+            console.log("Set Auto On to: " + schedulerJob[devId].nextDate() + "  " + data.name);
         }
         else schedulerJob[devId].stop();
 
@@ -284,7 +260,7 @@ function socketConnection(socket){
     socket.on('xbeeClientCmdReq', function(xbeeCmdObj){
         //console.log(xbeeCmdObj);
         var maxWait = 1500;
-        
+
         // Handle custom command request from client browsers.
         // xbeeIdReq: Requested xbee id from client (broadcast, xbee1, xbee2...). 
         // xbeeCmdReq: Requested xbee cmd from client.
@@ -382,6 +358,3 @@ process.on('uncaughtException', function(er){
   console.log(er.stack);
   process.exit(1);
 });
-
-
-//});//d domain
