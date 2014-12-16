@@ -8,12 +8,13 @@
     sudo nohup node serverWSN.js &>> server.log &
 
     Links:
+    Express, routes, app example: https://github.com/cwbuecheler/node-tutorial-2-restful-app
     Cron library:   https://github.com/ncb000gt/node-cron/blob/master/lib/cron.js
     Closure issue:  http://conceptf1.blogspot.com/2013/11/javascript-closures.html
     Authentication: https://github.com/jaredhanson/passport-local/tree/master/examples/login
 */
 
-// nodetime.com monitoring system.
+// Monitoring system modules.
 require('nodetime').profile({
     accountKey: 'e54a03c529e0fcfa708e33d960d219579411194d', 
     appName: 'serverWSN.js'
@@ -21,7 +22,7 @@ require('nodetime').profile({
 var SegfaultHandler = require('segfault-handler');
 SegfaultHandler.registerHandler();
 
-var express = require('express');
+// Application modules
 var fs = require('graceful-fs');
 var Q = require('q');
 var bbb = require('bonescript');
@@ -30,17 +31,6 @@ var cronTime = require('/var/lib/cloud9/WSN/custom_modules/cron').CronTime;
 var SerialPort = require('serialport').SerialPort;
 var xbee_api = require('/var/lib/cloud9/WSN/custom_modules/xbee-api');
 var ThingSpeakClient = require('thingspeakclient');
-var compression = require('compression');
-var minify = require('express-minify');
-var passport = require('passport');
-var LocalStrategy = require('passport-local').Strategy;
-var logger = require('morgan');
-var expressSession = require('express-session');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
-var methodOverride = require('method-override');
-var favicon = require('serve-favicon');
-var flash = require('connect-flash');  
 
 // Date instance for logging date and time.
 var dateTime = require('./lib/dateTime');
@@ -77,7 +67,7 @@ var serialport = new SerialPort("/dev/ttyO2", {
     parser: xbeeAPI.rawParser()
 });
 
-var xbee = new xbeeWSN.xbee(serialport, xbeeAPI, C);
+var xbee = new xbeeWSN(serialport, xbeeAPI, C);
 console.log("Start WSN nodes discovery...");
 xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in the xbee network and store the 16bit address.
 
@@ -93,39 +83,12 @@ setTimeout(function(){
 
 //******************************************************************************
 // Passport, Express and Routes configuration
-
-// Passport strategy setting. It make use of users.js file.
-require('./app_routes/initPassport')(passport);
-
-//var app = require('./app_routes/app')();
-var app = express();
-
-app.set('views', __dirname + '/views');
-app.set('view engine', 'ejs');
-app.use(compression());
-//app.use(minify({cache: __dirname + '/public/cache'}));
-app.use(favicon(__dirname + '/public/images/favicon.ico'));
-app.use(logger('dev'));
-app.use(cookieParser());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(methodOverride());
-app.use(expressSession({ secret: 'keyboard cat' , saveUninitialized: true,  resave: true }));
-// Initialize Passport!  Also use passport.session() middleware, to support persistent login sessions (recommended).
-app.use(flash());
-app.use(passport.initialize());
-app.use(passport.session());
-app.use(express.static(__dirname + '/public', {
-    etag: true,
-    maxage: 0
-}));
-
-// Express routes definition.
-var routes = require('./app_routes/routes')(passport, jsonSystemState);
-app.use('/', routes);
+var app = require('./app_routes/app');
 
 //var app = require('./app_routes/app');
-var server = app.listen(8888); 
+var server = app.listen(8888, function(){
+    console.log('Server listening on port 8888');
+}); 
 
 //io.engine.transports = ['websocket', 'polling'];
 var io = require('socket.io')(server, {
@@ -159,12 +122,6 @@ function jobAutoOn(devId){
 }
 initScheduler();
 
-/*setTimeout(function(){
-    initScheduler();
-    io.on('connection', socketConnection);
-    console.log("Server is ready to listen.");
-}, 11000);
-*/
 
 //******************************************************************************
 // Socket connection handlers
@@ -352,9 +309,3 @@ function writeThingSpeak(){
         xbee.sensorData[xbeeKey].sampleNum = 0;
     }
 }
-
-process.on('uncaughtException', function(er){
-  console.error(er.stack);
-  console.log(er.stack);
-  process.exit(1);
-});

@@ -12,9 +12,9 @@ function ensureAuthenticated(req, res, next) {
     res.redirect('/login');
 }
 
-module.exports = function(passport, jsonSystemState){
+module.exports = function(passport){
     router.get('/', ensureAuthenticated, function(req, res){
-        res.render('index', { jsonSystemState: jsonSystemState });
+        res.render('index');
     });
 
     router.get('/admin', ensureAuthenticated, function(req, res){
