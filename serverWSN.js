@@ -68,44 +68,65 @@ var serialport = new SerialPort("/dev/ttyO2", {
 });
 
 var xbee = new xbeeWSN(serialport, xbeeAPI, C);
-//xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in the xbee network and store the 16bit address.
-xbee.WSNNodeDiscovery();
-
-// Initialize local and remote devices.
-//initDevices(jsonSystemState, bbb, xbee);
-
-// Wait for node discovery to complete to initialize local and remote devices.    
-setTimeout(function(){
-    // Initialize local and remote devices.
-    initDevices(jsonSystemState, bbb, xbee);
-}, 16000);
 
 
 //******************************************************************************
 // Passport, Express and Routes configuration
 var app = require('./app_routes/app');
 
-//var app = require('./app_routes/app');
-var server = app.listen(8888, function(){
-    console.log('Server listening on port 8888');
-}); 
+var server; // server = app.listen(8888);
+var io;     // io = require('socket.io')(server);
 
-//io.engine.transports = ['websocket', 'polling'];
-var io = require('socket.io')(server, {
-    pingInterval: 7000,
-    pingTimeout: 16000,
-    transports: ['polling', 'websocket', 'flashsocket', 'xhr-polling']
-});
+// First: Initialize WSN discovering if possible all nodes.
+// Second: Initialize all devices in the network to the preview state.
+// Third: Initiliaze http server.
+// Fourth: Initialize socket.io.
+async.series([
+    function(callback){ 
+        xbee.WSNNodeDiscovery(function(error){
+            if(error){
+                console.log(error);
+                console.log('Nodes not discovered are: ' + xbee.searchNodesNotDiscovered());
+            }
+            else{
+                console.log('Node Discovery Complete.'); // All node have been discovered.
+            }
+            // Main listener for xbee rx frames.
+            xbeeAPI.on("frame_object", xbeeFrameListener);
+            console.log('Enable main xbee listener for rx frames.');
+            callback(null);
+        });
+    },
+    function(callback){
+        initDevices(jsonSystemState, bbb, xbee);
+        callback(null);
+    },
+    function(callback){
+        server = app.listen(8888, function(error){
+            if(error) return callback(error);
+            console.log('Server listening on port 8888.');
+            callback(null);
+        }); 
+    },
+    function(callback){
+        io = require('socket.io')(server, {
+            pingInterval: 7000,
+            pingTimeout: 16000,
+            transports: ['polling', 'websocket', 'flashsocket', 'xhr-polling']
+        });
+        io.on('connection', socketConnection);
+        console.log("Socket.io is ready.");
+        callback(null);
+    }],
+    function(err){ //This function gets called after all tasks has called its callback functions.
+        if(err) return console.log(err);
+        console.log('Async series ok.');
+    }
+);
 
 //******************************************************************************
-// Scheduler objects initialization
+// Scheduler objects initialization and function job definition.
 var schedulerJob = [];
-
-function initScheduler(){
-    for(var devId in jsonSystemState){
-        schedulerJob[devId] = new cronJob('', null, null, false, null); // Just create the objects.
-    }
-}
 // This is what is going to be executed when the cron time arrive.
 function jobAutoOn(devId){
     jsonSystemState[devId].switchValue = 1;
@@ -120,13 +141,11 @@ function jobAutoOn(devId){
         if(err) return console.log(err);
     });
 }
-initScheduler();
 
 
 //******************************************************************************
 // Socket connection handlers
 // Listen to changes made from the clients control panel.
-io.on('connection', socketConnection);
 function socketConnection(socket){
     var connectIP = socket.client.conn.remoteAddress;
     console.log(dateTime() + '  IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
@@ -194,13 +213,14 @@ function socketConnection(socket){
             var minuteStr = parseInt(autoTimeSplit[1], 10).toString();
 
             // Set new scheduler values.
-            var myCronTime = new cronTime('0 ' + minuteStr + ' ' + hourStr + ' * * *', null);
-            schedulerJob[devId].setTime(myCronTime);
-            schedulerJob[devId].setCallback(jobAutoOn.bind(this, devId));   // Set job/function to be execute on cron tick.
+            schedulerJob[devId] = new cronJob('0 ' + minuteStr + ' ' + hourStr + ' * * *', 
+                jobAutoOn.bind(this, devId), null, true, null); // Just create the objects.
+            //schedulerJob[devId].setTime(myCronTime);
+            //schedulerJob[devId].setCallback(jobAutoOn.bind(this, devId));   // Set job/function to be execute on cron tick.
             schedulerJob[devId].start();
             console.log("Set Auto On to: " + schedulerJob[devId].nextDate() + "  " + data.name);
         }
-        else schedulerJob[devId].stop();
+        else if(schedulerJob[devId] instanceof cronJob) schedulerJob[devId].stop();
 
         // Store new values into json file systemState.json
         fs.writeFile(jsonFileName, JSON.stringify(jsonSystemState, null, 4), function (err) {
@@ -265,7 +285,7 @@ function socketConnection(socket){
 
 
 // Xbee frame listener. The frame type determine which function is called.
-//xbeeAPI.addListener("frame_object", xbeeFrameListener);
+//xbeeAPI.on("frame_object", xbeeFrameListener);
 function xbeeFrameListener(frame){
     switch(frame.type){
         // AT Command Response.
@@ -288,7 +308,6 @@ function xbeeFrameListener(frame){
 
 // Update ThingSpeak database each 5 minutes.
 setInterval(writeThingSpeak, 5*60*1000);
-
 function writeThingSpeak(){
     // Create object with temperature averages.
     var fieldsUpdate = {
