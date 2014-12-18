@@ -93,7 +93,7 @@ async.series([
             }
             // Main listener for xbee rx frames.
             xbeeAPI.on("frame_object", xbeeFrameListener);
-            console.log('Enable main xbee listener for rx frames.');
+            console.log("Enable main listener for xbee's received frames.");
             callback(null);
         });
     },
@@ -120,13 +120,18 @@ async.series([
     }],
     function(err){ //This function gets called after all tasks has called its callback functions.
         if(err) return console.log(err);
-        console.log('Async series ok.');
+        console.log('System initialization using async series is complete.');
     }
 );
 
 //******************************************************************************
 // Scheduler objects initialization and function job definition.
 var schedulerJob = [];
+(function initScheduler(){
+    for(var devId in jsonSystemState){
+        schedulerJob[devId] = new cronJob('', null, null, false, null); // Just create the objects.
+    }
+})();
 // This is what is going to be executed when the cron time arrive.
 function jobAutoOn(devId){
     jsonSystemState[devId].switchValue = 1;
@@ -213,10 +218,9 @@ function socketConnection(socket){
             var minuteStr = parseInt(autoTimeSplit[1], 10).toString();
 
             // Set new scheduler values.
-            schedulerJob[devId] = new cronJob('0 ' + minuteStr + ' ' + hourStr + ' * * *', 
-                jobAutoOn.bind(this, devId), null, true, null); // Just create the objects.
-            //schedulerJob[devId].setTime(myCronTime);
-            //schedulerJob[devId].setCallback(jobAutoOn.bind(this, devId));   // Set job/function to be execute on cron tick.
+            var myCronTime = new cronTime('0 ' + minuteStr + ' ' + hourStr + ' * * *', null);
+            schedulerJob[devId].setTime(myCronTime);
+            schedulerJob[devId].setCallback(jobAutoOn.bind(this, devId));   // Set job/function to be execute on cron tick.
             schedulerJob[devId].start();
             console.log("Set Auto On to: " + schedulerJob[devId].nextDate() + "  " + data.name);
         }
@@ -231,55 +235,16 @@ function socketConnection(socket){
 
 
 
-
-
     // Listen for client xbee remote AT command request.
     socket.on('xbeeClientCmdReq', function(xbeeCmdObj){
-        //console.log(xbeeCmdObj);
-        var maxTimeWait = 1500;
-
-        // Handle custom command request from client browsers.
-        // xbeeIdReq: Requested xbee id from client (broadcast, xbee1, xbee2...). 
-        // xbeeCmdReq: Requested xbee cmd from client.
-        function xbeeClientCmdHandler(xbeeIdReq, xbeeCmdReq, xbeeParamReq){
-            var frameId = xbeeAPI.nextFrameId();
-            // If xbeeIdReq is a broadcast signal or a remote xbee module, use remoteATCmdReq().
-            if(xbeeIdReq !== 'coordinator') xbee.remoteATCmdReq(xbeeIdReq, frameId, xbeeCmdReq, xbeeParamReq);
-            else xbee.ATCmdReq(frameId, xbeeCmdReq, xbeeParamReq);  // If coordinator was selected, send a local cmd req.
-
-            // We're going to return a promise and handle ATCmdReq and remoteATCmdReq response when they arrive.
-            var deferred = Q.defer();
-
-            // Attach callback and wait for the deferred response.
-            xbeeAPI.on("frame_object", callback);            
-            function callback(receivedFrame){
-                if(receivedFrame.id === frameId){
-                    receivedFrame.type = '0x' + receivedFrame.type.toString(16);
-                    receivedFrame.xbeeId = xbee.getXbeeKeyByAddress64(receivedFrame.remote64);
-                    receivedFrame.commandData = '[' + receivedFrame.commandData.toString() + ']';
-                    // This is our frame's response. Resolve the promise.
-                    deferred.resolve(receivedFrame);
-                }
-            };
-
-            // There could be multiple responses when using a broadcasted cmd, so maxTimeWait must be incremented.
-            if(xbeeIdReq === 'broadcast') maxTimeWait = maxTimeWait + 2000;
-            // Clear up: remove listener after the timeout and a bit, it's no longer needed.
-            // This way we avoid having multiple xbeeAPI.on() listener (avoid memory leak).
-            setTimeout(function(){
-                xbeeAPI.removeListener("frame_object", callback);
-            }, maxTimeWait + 100);
-
-            // If maxTimeWait milisecond pass without a resolve, the promise will be rejected.
-            return deferred.promise.timeout(maxTimeWait);
-        }
-
-        xbeeClientCmdHandler(xbeeCmdObj.xbeeId, xbeeCmdObj.xbeeCmd, xbeeCmdObj.xbeeParam)
-        .then(function(frame){
-            socket.emit('cmdResponseFrame', frame);
-        }).catch(function(e){
-            console.log("Command failed:", e);
-        });
+        var xbeeId = xbeeCmdObj.xbeeId;     // Requested xbee id from client (broadcast, xbee1, xbee2...). 
+        var xbeeCmd = xbeeCmdObj.xbeeCmd;   // Requested xbee cmd from client.
+        var xbeeParam = xbeeCmdObj.xbeeParam;
+        
+        if(xbeeId !== 'coordinator') xbee.remoteATCmdReq(xbeeId, null, xbeeCmd, xbeeParam);
+        else xbee.ATCmdReq(null, xbeeCmd, xbeeParam);  // If coordinator was selected, send a local cmd req.
+        
+        return;
     });     // socket.on('xbeeClientCmdReq', function(xbeeCmdObj){}) end.
 }           // function socketConnection() end.
 
@@ -318,9 +283,9 @@ function writeThingSpeak(){
     //console.log(fieldsUpdate);
     thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp){
         if(err || resp <= 0){
-            console.log('An error ocurred while updating ThingSpeak.');
+            return console.log('An error ocurred while updating ThingSpeak.');
         }
-        // else console.log('Update successfully. Entry number was: ' + resp);
+        else console.log('Update successfully. Entry number was: ' + resp);
     });
     
     // Restore sensorData object for new measurements.

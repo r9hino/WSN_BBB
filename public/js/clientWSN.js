@@ -8,7 +8,7 @@ $(document).on("pagecreate", function(){
     var $connectionStatus = $('#connectionStatus');
 
     // Global variables.
-    var guiActiveTime = 3*60*1000;  // Miliseconds.
+    var guiActiveTime = 15*1*1000;  // Miliseconds.
 
     var socket = io.connect('pipobbb.mooo.com:8888',{
         forceNew: true,
@@ -17,7 +17,7 @@ $(document).on("pagecreate", function(){
     });
 
     console.time('connection');    
-    // Each time client connects/reconnects, it requests the system state to the server
+    // Each time client connects/reconnects, toggle grayed GUI.
     socket.on('connect',function(){
         console.timeEnd('connection');
         console.log('Connect socket status: ', socket.io.engine);
@@ -25,16 +25,16 @@ $(document).on("pagecreate", function(){
         // Enable graphical user interface GUI.
         enableGUI();
         
-        // When client connects/reconnects, retrieve json file with the system state.
-        socket.on('jsonSystemState', function(jsonServerData){
-            $controlPanel.empty();  // Empty the div
-
+        // Update system state.
+        socket.once('jsonSystemState', function(jsonServerData){
+            $controlPanel.empty();  // Empty the div.
+    
             for(var devId in jsonServerData){
     		    var name = jsonServerData[devId].name;
     		    var switchValue = jsonServerData[devId].switchValue;
     		    var autoMode = jsonServerData[devId].autoMode;
     		    var autoTime = jsonServerData[devId].autoTime;
-
+    
     		    // Create buttons based on the system state.
     		    $controlPanel.append(
                 '<div class="ui-field-contain ui-responsive">\

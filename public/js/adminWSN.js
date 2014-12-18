@@ -3,7 +3,6 @@
 */
 
 $(document).on("pagecreate", function(){
-
     // Jquery variables.
     var $adminPanel = $('#adminPanel');
     var $connectionStatus = $('#connectionStatus');
@@ -16,46 +15,54 @@ $(document).on("pagecreate", function(){
         transports: ['xhr-polling', 'websocket', 'flashsocket', 'polling']
     });
 
+    // Check system speed for concluding socket connection.
     console.time('connection');    
-    // Each time client connects/reconnects, it requests the system state to the server
+    // Each time client connects/reconnects, toggle grayed GUI.
     socket.on('connect',function(){
         console.timeEnd('connection');
         console.log('Connect socket status: ', socket.io.engine);
         
         // Enable graphical user interface GUI.
         enableGUI();
-
-        // When client connects/reconnects, retrieve json file with the system state.
-        socket.on('jsonSystemState', function (jsonServerData){ 
-            $adminPanel.empty();  // Empty the div.
-
-    		// Create xbee remote AT command request gui form.
-            var optionSelectString = '';
-            // First option in the select input is broadcast the command to all xbees.
-            optionSelectString += '<option value="broadcast">broadcast</option>';
-            optionSelectString += '<option value="coordinator">coordinator</option>';
-            for (var devId in jsonServerData) {
-                if (jsonServerData[devId].type === 'xbee'){
-                    var xbeeId = jsonServerData[devId].xbee;
-                    optionSelectString += '<option value="' + xbeeId + '">' + xbeeId + '</option>';
-                }
-            }
-    		$adminPanel.append(
-    		'<div class="ui-field-contain" id="remoteATCmdReq-gui">\
-    		    <select id="select-xbee" data-mini="true" data-inline="true">\
-    		        ' + optionSelectString + '\
-                </select>\
-                <input type="text" id="text-xbee-cmd" value="" placeholder="Xbee Cmd" size="8">\
-                <input type="text" id="text-xbee-param" value="" placeholder="Parameter" size="8">\
-                <button class="ui-btn ui-btn-inline ui-mini ui-corner-all" id="xbee-cmd-send">Send</button>\
-            </div>\
-            <div id="frame-text-div">\
-            </div>'
-            );
-            $adminPanel.trigger('create');
-            $('#remoteATCmdReq-gui').find('.ui-select').addClass('horizontal-select'); // This way css can choose only this select input.
-            $('#remoteATCmdReq-gui').find('.ui-input-text').addClass('horizontal-text'); // This way css can choose only this text inputs.
+        
+        // Retrieve Xbees/Nodes network states (routes, addresses, devices down).
+        socket.on('xbeeWSNState', function(){
+            
         });
+    });
+
+    // Display input buttons for command request.
+    // System state is received only one time.
+    socket.once('jsonSystemState', function (jsonServerData){ 
+        $adminPanel.empty();  // Empty the div.
+
+		// Create xbee remote AT command request gui form.
+        var optionSelectString = '';
+        // First option in the select input is broadcast the command to all xbees.
+        optionSelectString += '<option value="broadcast">broadcast</option>';
+        optionSelectString += '<option value="coordinator">coordinator</option>';
+        for (var devId in jsonServerData) {
+            if (jsonServerData[devId].type === 'xbee'){
+                var xbeeId = jsonServerData[devId].xbee;
+                optionSelectString += '<option value="' + xbeeId + '">' + xbeeId + '</option>';
+            }
+        }
+        // Add inputs to the web.
+		$adminPanel.append(
+		'<div class="ui-field-contain" id="remoteATCmdReq-gui">\
+		    <select id="select-xbee" data-mini="true" data-inline="true">\
+		        ' + optionSelectString + '\
+            </select>\
+            <input type="text" id="text-xbee-cmd" value="" placeholder="Xbee Cmd" size="8">\
+            <input type="text" id="text-xbee-param" value="" placeholder="Parameter" size="8">\
+            <button class="ui-btn ui-btn-inline ui-mini ui-corner-all" id="xbee-cmd-send">Send</button>\
+        </div>\
+        <div id="frame-text-div">\
+        </div>'
+        );
+        $adminPanel.trigger('create');
+        $('#remoteATCmdReq-gui').find('.ui-select').addClass('horizontal-select'); // This way css can choose only this select input.
+        $('#remoteATCmdReq-gui').find('.ui-input-text').addClass('horizontal-text'); // This way css can choose only this text inputs.
     });
     
     // Handle local and remote AT command request gui interactions.
