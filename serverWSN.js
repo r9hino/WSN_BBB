@@ -15,15 +15,15 @@
 */
 
 // Monitoring system modules.
-require('nodetime').profile({
+/*require('nodetime').profile({
     accountKey: 'e54a03c529e0fcfa708e33d960d219579411194d', 
     appName: 'serverWSN.js'
 });
-var SegfaultHandler = require('segfault-handler');
-SegfaultHandler.registerHandler();
+*/
 
 // Application modules
-var fs = require('graceful-fs');
+var fs = require('graceful-fs');    // Handle file system read/write.
+var async = require("async");
 var Q = require('q');
 var bbb = require('bonescript');
 var cronJob = require('/var/lib/cloud9/WSN/custom_modules/cron').CronJob;
@@ -68,8 +68,8 @@ var serialport = new SerialPort("/dev/ttyO2", {
 });
 
 var xbee = new xbeeWSN(serialport, xbeeAPI, C);
-console.log("Start WSN nodes discovery...");
-xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in the xbee network and store the 16bit address.
+//xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in the xbee network and store the 16bit address.
+xbee.WSNNodeDiscovery();
 
 // Initialize local and remote devices.
 //initDevices(jsonSystemState, bbb, xbee);
@@ -78,7 +78,7 @@ xbee.remoteATCmdReq('broadcast', null, 'ND', '');   // Discover every node in th
 setTimeout(function(){
     // Initialize local and remote devices.
     initDevices(jsonSystemState, bbb, xbee);
-}, 10000);
+}, 16000);
 
 
 //******************************************************************************
@@ -216,7 +216,7 @@ function socketConnection(socket){
     // Listen for client xbee remote AT command request.
     socket.on('xbeeClientCmdReq', function(xbeeCmdObj){
         //console.log(xbeeCmdObj);
-        var maxWait = 1500;
+        var maxTimeWait = 1500;
 
         // Handle custom command request from client browsers.
         // xbeeIdReq: Requested xbee id from client (broadcast, xbee1, xbee2...). 
@@ -242,16 +242,16 @@ function socketConnection(socket){
                 }
             };
 
-            // There could be multiple responses when using a broadcasted cmd, so maxWait must be incremented.
-            if(xbeeIdReq === 'broadcast') maxWait = maxWait + 2000;
+            // There could be multiple responses when using a broadcasted cmd, so maxTimeWait must be incremented.
+            if(xbeeIdReq === 'broadcast') maxTimeWait = maxTimeWait + 2000;
             // Clear up: remove listener after the timeout and a bit, it's no longer needed.
             // This way we avoid having multiple xbeeAPI.on() listener (avoid memory leak).
             setTimeout(function(){
                 xbeeAPI.removeListener("frame_object", callback);
-            }, maxWait + 100);
+            }, maxTimeWait + 100);
 
-            // If maxWait milisecond pass without a resolve, the promise will be rejected.
-            return deferred.promise.timeout(maxWait);
+            // If maxTimeWait milisecond pass without a resolve, the promise will be rejected.
+            return deferred.promise.timeout(maxTimeWait);
         }
 
         xbeeClientCmdHandler(xbeeCmdObj.xbeeId, xbeeCmdObj.xbeeCmd, xbeeCmdObj.xbeeParam)
@@ -264,8 +264,9 @@ function socketConnection(socket){
 }           // function socketConnection() end.
 
 
-// Xbee frame receiver. The frame type determine which function is called.
-xbeeAPI.on("frame_object", function(frame){
+// Xbee frame listener. The frame type determine which function is called.
+//xbeeAPI.addListener("frame_object", xbeeFrameListener);
+function xbeeFrameListener(frame){
     switch(frame.type){
         // AT Command Response.
         case 0x88: xbee.ATCmdResponse(frame); break;
@@ -283,7 +284,7 @@ xbeeAPI.on("frame_object", function(frame){
             console.log("Not defined frame type: 0x" + frame.type.toString(16).toUpperCase());
             console.log(frame); break;
     }
-});
+}
 
 // Update ThingSpeak database each 5 minutes.
 setInterval(writeThingSpeak, 5*60*1000);

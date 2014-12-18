@@ -78,7 +78,7 @@ $(document).on("pagecreate", function(){
         Also used as feedback from the server. Client --> Server --> Client.
         Client send new states to server, and if server did the work, it send back
         again the system state values as a confirmation procedure.*/
-    socket.on('updateClients', function (serverData) {
+    socket.on('updateClients', function(serverData){
         console.log("Data from server: ", serverData);
         var devId = serverData.id;
         var switchValue = serverData.switchValue;
