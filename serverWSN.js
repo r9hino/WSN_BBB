@@ -159,13 +159,35 @@ function socketConnection(socket){
         console.log(dateTime() + '  IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
-    // Send jsonSystemState data to client at the beginning of connection.
+    // Send jsonSystemState data (BBB pins and xbees) to client at the beginning of connection.
     socket.emit('jsonSystemState', jsonSystemState);
     
+    // Send Xbees/Nodes network states (routes, addresses, devices down) to client admin web page.
+    // Unfortunately, it will be also sended to clientWSN web page.
+    //console.log(xbee.xbeeWSNState());
+    socket.emit('jsonXbeeWSNInfo', xbee.getXbeeWSNInfo());
+    
+    // Listen for client xbee remote AT command request.
+    socket.on('clientXbeeCmdReq', function(xbeeCmdObj){
+        var xbeeId = xbeeCmdObj.xbeeId;     // Requested xbee id from client (broadcast, xbee1, xbee2...). 
+        var xbeeCmd = xbeeCmdObj.xbeeCmd;   // Requested xbee cmd from client.
+        var xbeeParam = xbeeCmdObj.xbeeParam;
+        
+        if((xbeeCmd !== undefined) && (xbeeCmd !== null) && (xbeeCmd !== '')){
+            xbeeCmd = xbeeCmd.toUpperCase();
+            console.log(xbeeId + ' - Client xbee command request: ' + xbeeCmd + ' ' + xbeeParam);
+            if(xbeeId !== 'coordinator') xbee.remoteATCmdReq(xbeeId, null, xbeeCmd, xbeeParam);
+            else xbee.ATCmdReq(null, xbeeCmd, xbeeParam);  // If coordinator was selected, send a local cmd req.
+        }
+        return;
+    });     // socket.on('xbeeClientCmdReq', function(xbeeCmdObj){}) end.
+    
+    
+    
     // Listen for changes made by user on browser/client side. Then update system state.
-    socket.on('elementChanged', updateSystemState);
     // Update system state based on clientData values sended by client's browsers.
     // clientData format is: {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime}
+    socket.on('elementChanged', updateSystemState);
     function updateSystemState(clientData){
         var devId = clientData.id;
         // Store received data in JSON object.
@@ -184,7 +206,7 @@ function socketConnection(socket){
                 // Only for testing purpose MCU+Xbee
                 if(data.xbee === 'xbee3'){    //'123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J'
                     xbee.ZBTransmitRequest(data.xbee, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-                    xbee.displayXbeeNodes();
+                    console.log(xbee.getXbeeWSNInfo());
                 }
             }
             else{
@@ -232,20 +254,6 @@ function socketConnection(socket){
             //else console.log("JSON file saved at " + jsonFileName);
         });
     }   // updateSystemState() function end.
-
-
-
-    // Listen for client xbee remote AT command request.
-    socket.on('xbeeClientCmdReq', function(xbeeCmdObj){
-        var xbeeId = xbeeCmdObj.xbeeId;     // Requested xbee id from client (broadcast, xbee1, xbee2...). 
-        var xbeeCmd = xbeeCmdObj.xbeeCmd;   // Requested xbee cmd from client.
-        var xbeeParam = xbeeCmdObj.xbeeParam;
-        
-        if(xbeeId !== 'coordinator') xbee.remoteATCmdReq(xbeeId, null, xbeeCmd, xbeeParam);
-        else xbee.ATCmdReq(null, xbeeCmd, xbeeParam);  // If coordinator was selected, send a local cmd req.
-        
-        return;
-    });     // socket.on('xbeeClientCmdReq', function(xbeeCmdObj){}) end.
 }           // function socketConnection() end.
 
 

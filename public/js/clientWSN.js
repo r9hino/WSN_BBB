@@ -8,7 +8,7 @@ $(document).on("pagecreate", function(){
     var $connectionStatus = $('#connectionStatus');
 
     // Global variables.
-    var guiActiveTime = 15*1*1000;  // Miliseconds.
+    var guiActiveTime = 3*60*1000;  // Miliseconds.
 
     var socket = io.connect('pipobbb.mooo.com:8888',{
         forceNew: true,

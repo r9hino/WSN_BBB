@@ -5,6 +5,8 @@
 $(document).on("pagecreate", function(){
     // Jquery variables.
     var $adminPanel = $('#adminPanel');
+    var $cmdReqPanel = $('#cmdReqPanel');
+    var $xbeeWSNInfoPanel = $('#xbeeWSNInfoPanel');
     var $connectionStatus = $('#connectionStatus');
 
     // Global variables.
@@ -21,20 +23,16 @@ $(document).on("pagecreate", function(){
     socket.on('connect',function(){
         console.timeEnd('connection');
         console.log('Connect socket status: ', socket.io.engine);
-        
+
         // Enable graphical user interface GUI.
         enableGUI();
-        
-        // Retrieve Xbees/Nodes network states (routes, addresses, devices down).
-        socket.on('xbeeWSNState', function(){
-            
-        });
     });
 
     // Display input buttons for command request.
     // System state is received only one time.
-    socket.once('jsonSystemState', function (jsonServerData){ 
-        $adminPanel.empty();  // Empty the div.
+    socket.once('jsonSystemState', createCmdReqPanel);
+    function createCmdReqPanel(jsonServerData){ 
+        $cmdReqPanel.empty();  // Empty the div.
 
 		// Create xbee remote AT command request gui form.
         var optionSelectString = '';
@@ -48,7 +46,7 @@ $(document).on("pagecreate", function(){
             }
         }
         // Add inputs to the web.
-		$adminPanel.append(
+		$cmdReqPanel.append(
 		'<div class="ui-field-contain" id="remoteATCmdReq-gui">\
 		    <select id="select-xbee" data-mini="true" data-inline="true">\
 		        ' + optionSelectString + '\
@@ -60,23 +58,53 @@ $(document).on("pagecreate", function(){
         <div id="frame-text-div">\
         </div>'
         );
-        $adminPanel.trigger('create');
+        $cmdReqPanel.trigger('create');
         $('#remoteATCmdReq-gui').find('.ui-select').addClass('horizontal-select'); // This way css can choose only this select input.
         $('#remoteATCmdReq-gui').find('.ui-input-text').addClass('horizontal-text'); // This way css can choose only this text inputs.
-    });
+    }
     
     // Handle local and remote AT command request gui interactions.
-    $adminPanel.on('click', '#xbee-cmd-send', function(){
+    $cmdReqPanel.on('click', '#xbee-cmd-send', function(){
         var xbeeIdReq = $("#select-xbee option:selected").val()
         var xbeeCmdReq = $('#text-xbee-cmd').val();
         var xbeeParamReq = $('#text-xbee-param').val();
         var xbeeCmdObj = {'xbeeId': xbeeIdReq, 'xbeeCmd': xbeeCmdReq, 'xbeeParam': xbeeParamReq};
-        socket.emit('xbeeClientCmdReq', xbeeCmdObj);  // Now client must wait for command response.
+        socket.emit('clientXbeeCmdReq', xbeeCmdObj);  // Now client must wait for command response.
     });
-    // Receive frame response from server to the remote AT command request gui.
-    socket.on('cmdResponseFrame', function (frameResponse) {
-        //console.log(JSON.stringify(frameResponse, null, 4));
-        $('#frame-text-div').html('<pre><code>'+JSON.stringify(frameResponse, null, 4)+'</code></pre>');
+
+
+    // Retrieve Xbees/Nodes network info (routes, addresses, devices down) and crate a table.
+    socket.once('jsonXbeeWSNInfo', function(jsonXbeeWSNInfo){
+        // All table html code is implemented in javascript to avoid problem with table 
+        // responsiveness (columntoggle). Problem when mixing static html parts and dynamic added parts.
+        var tableString = '';
+        tableString += '<table data-role="table" data-column-btn-text="Columns to display" data-mode="columntoggle" class="reference ui-responsive ui-shadow table-stroke" id="adminTable">';
+            tableString += '<thead><tr>';
+            tableString += '<th id="th1">Xbee Source</th>';
+            tableString += '<th id="th2" data-priority="1">Routes</th>';
+            tableString += '<th id="th3" data-priority="2">16bit Addr</th>';
+            tableString += '<th id="th4" data-priority="3">32bit Addr</th>';
+            tableString += '</tr></thead>';
+        tableString += '<tbody id="tbody-admin">';
+                    
+        for (var xbeeKey in jsonXbeeWSNInfo.networkRoutes) {
+            var route = jsonXbeeWSNInfo.networkRoutes[xbeeKey].toString();
+            var addr16 = jsonXbeeWSNInfo.addrXbee16[xbeeKey];
+            var addr64 = jsonXbeeWSNInfo.addrXbee64[xbeeKey].slice(8);  // Only the LSB.
+            tableString += '<tr>';
+            tableString += '<td>'+xbeeKey+'</td>';
+            tableString += '<td>'+route+'</td>';
+            tableString += '<td>'+'0x'+addr16+'</td>';
+            tableString += '<td>'+'0x'+addr64+'</td>';
+            tableString += '</tr>';
+        }
+        tableString += '</tbody>';
+        tableString += '</table>';
+        $xbeeWSNInfoPanel.append(tableString);
+        //$("#adminTable-popup-popup").remove();
+        //$('#adminTable').table();
+        $xbeeWSNInfoPanel.trigger('create');
+        //$xbeeWSNInfoPanel.html(tableString).enhanceWithin();
     });
 
     // Update connection status.
