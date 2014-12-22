@@ -30,7 +30,7 @@ function loadSystemState(){
         "dev2": {
             "id":"dev2",
             "type": "xbee",
-            "xbee": "xbee1",
+            "xbee": "xb1",
             "name": "Musica",
             "switchValue": 0,
             "autoMode": 0,
@@ -39,7 +39,7 @@ function loadSystemState(){
         "dev3": {
             "id":"dev3",
             "type": "xbee",
-            "xbee": "xbee2",
+            "xbee": "xb2",
             "name": "Calentador Raul",
             "switchValue": 0,
             "autoMode": 0,
@@ -48,7 +48,7 @@ function loadSystemState(){
         "dev4": {
             "id":"dev4",
             "type": "xbee",
-            "xbee": "xbee3",
+            "xbee": "xb3",
             "name": "Xbee Free",
             "switchValue": 0,
             "autoMode": 0,

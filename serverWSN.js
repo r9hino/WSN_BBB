@@ -162,13 +162,21 @@ function socketConnection(socket){
     // Send jsonSystemState data (BBB pins and xbees) to client at the beginning of connection.
     socket.emit('jsonSystemState', jsonSystemState);
     
-    // Send Xbees/Nodes network states (routes, addresses, devices down) to client admin web page.
-    // Unfortunately, it will be also sended to clientWSN web page.
-    //console.log(xbee.xbeeWSNState());
-    socket.emit('jsonXbeeWSNInfo', xbee.getXbeeWSNInfo());
+    // Admin page: client request for xbee WSN info.
+    socket.on('reqXbeeWSNInfo', function(){
+        // Send Xbees/Nodes network states (routes, addresses, devices down) to client admin web page.
+        // Unfortunately, it will be also sended to clientWSN web page.
+        var jsonXbeeWSNInfo = {
+            "addrXbee64": xbee.getAddrXbee64(), 
+            "addrXbee16": xbee.getAddrXbee16(), 
+            "networkRoutes": xbee.getNetworkRoutes()
+        };
+        socket.emit('respXbeeWSNInfo', jsonXbeeWSNInfo);
+    });
     
     // Listen for client xbee remote AT command request.
-    socket.on('clientXbeeCmdReq', function(xbeeCmdObj){
+    socket.on('clientXbeeCmdReq', clientXbeeCmdreqHandler);     // End socket.on('xbeeClientCmdReq', function(xbeeCmdObj){}).
+    function clientXbeeCmdreqHandler(xbeeCmdObj){
         var xbeeId = xbeeCmdObj.xbeeId;     // Requested xbee id from client (broadcast, xbee1, xbee2...). 
         var xbeeCmd = xbeeCmdObj.xbeeCmd;   // Requested xbee cmd from client.
         var xbeeParam = xbeeCmdObj.xbeeParam;
@@ -180,8 +188,7 @@ function socketConnection(socket){
             else xbee.ATCmdReq(null, xbeeCmd, xbeeParam);  // If coordinator was selected, send a local cmd req.
         }
         return;
-    });     // socket.on('xbeeClientCmdReq', function(xbeeCmdObj){}) end.
-    
+    }
     
     
     // Listen for changes made by user on browser/client side. Then update system state.
@@ -204,15 +211,14 @@ function socketConnection(socket){
             if(data.switchValue === 1){
                 xbee.remoteATCmdReq(data.xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
                 // Only for testing purpose MCU+Xbee
-                if(data.xbee === 'xbee3'){    //'123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J'
+                if(data.xbee === 'xb3'){    //'123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J'
                     xbee.ZBTransmitRequest(data.xbee, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-                    console.log(xbee.getXbeeWSNInfo());
                 }
             }
             else{
                 xbee.remoteATCmdReq(data.xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_LOW);
                 // Only for testing purpose MCU+Xbee
-                if(data.xbee === 'xbee3'){
+                if(data.xbee === 'xb3'){
                     xbee.ZBTransmitRequest(data.xbee, 'off');
                 }
             }
@@ -253,8 +259,8 @@ function socketConnection(socket){
             if(err) console.log(err);
             //else console.log("JSON file saved at " + jsonFileName);
         });
-    }   // updateSystemState() function end.
-}           // function socketConnection() end.
+    }       // End updateSystemState() function.
+}           // End function socketConnection().
 
 
 // Xbee frame listener. The frame type determine which function is called.
@@ -284,16 +290,16 @@ setInterval(writeThingSpeak, 5*60*1000);
 function writeThingSpeak(){
     // Create object with temperature averages.
     var fieldsUpdate = {
-        field1: (xbee.sensorData['xbee1'].tempAccum/xbee.sensorData['xbee1'].sampleNum).toFixed(2),
-        field2: (xbee.sensorData['xbee2'].tempAccum/xbee.sensorData['xbee2'].sampleNum).toFixed(2),
-        field3: xbee.sensorData['xbee3'].t
+        field1: (xbee.sensorData['xb1'].tempAccum/xbee.sensorData['xb1'].sampleNum).toFixed(2),
+        field2: (xbee.sensorData['xb2'].tempAccum/xbee.sensorData['xb2'].sampleNum).toFixed(2),
+        field3: xbee.sensorData['xb3'].t
     };
     //console.log(fieldsUpdate);
     thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp){
         if(err || resp <= 0){
             return console.log('An error ocurred while updating ThingSpeak.');
         }
-        else console.log('Update successfully. Entry number was: ' + resp);
+        //else console.log('Update successfully. Entry number was: ' + resp);
     });
     
     // Restore sensorData object for new measurements.

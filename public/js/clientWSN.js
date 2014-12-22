@@ -26,7 +26,7 @@ $(document).on("pagecreate", function(){
         enableGUI();
         
         // Update system state.
-        socket.once('jsonSystemState', function(jsonServerData){
+        socket.on('jsonSystemState', function(jsonServerData){
             $controlPanel.empty();  // Empty the div.
     
             for(var devId in jsonServerData){
@@ -113,32 +113,19 @@ $(document).on("pagecreate", function(){
     }
 
     // Update connection status.
-    // Reasons: 'ping timeout', 'forced close', 'transport close'
-    socket.on('disconnect', function(reason){
-        $connectionStatus.text('Offline ' + reason);
-		$connectionStatus.css('color', 'red');
-		console.log('Disconnect socket status: ', socket);
-    });
-    // Update connection status.
-    socket.on('reconnect', function(){
-        $connectionStatus.text('Reconnecting');
-		$connectionStatus.css('color', '#2356e1');
-		console.log('Reconnect socket status: ', socket);
-    });
-
     $(window).on('click', function(){
         // If control panel is disabled, clicking in grayed background return connection to server.
         if($controlPanel.hasClass('ui-state-disabled')){
-            //console.log(socket);
-            socket.io.skipReconnect = false;
-            socket.io.reconnect();
+            $connectionStatus.text('Reconnecting');
+		    $connectionStatus.css('color', '#2356e1');
+            socket.io.connect();
         }
         // If control panel is available, then each click reset setTimeout's timer.
         // I.E. disconnection will occur # seconds after last click.
         else{
             clearTimeout(timerTimeout);
             timerTimeout = null;
-            // Disconnect from server after 'guiActiveTime' seconds. Reconnection occurs when user clicks on grayed background.        
+            // Reset disconnection time 'guiActiveTime' seconds.
             timerTimeout = setTimeout(disconnectOnTimeout, guiActiveTime);
         }
     });
@@ -159,8 +146,9 @@ $(document).on("pagecreate", function(){
     function windowFocus() {
         // If control panel is disabled, focus will try to reconnect.
         if($controlPanel.hasClass('ui-state-disabled')){
-            socket.io.skipReconnect = false;
-            socket.io.reconnect();
+            $connectionStatus.text('Reconnecting');
+		    $connectionStatus.css('color', '#2356e1');
+            socket.io.connect();
         }
     }
     
@@ -175,6 +163,13 @@ $(document).on("pagecreate", function(){
         timerTimeout = null;
         timerTimeout = setTimeout(disconnectOnTimeout, guiActiveTime);
     }
+    
+    // Reasons: 'ping timeout', 'forced close', 'transport close'
+    socket.on('disconnect', function(reason){
+        $connectionStatus.text('Offline ' + reason);
+		$connectionStatus.css('color', 'red');
+		console.log('Disconnect socket status: ', socket);
+    });
     
     function disconnectOnTimeout(){
         // Close connection after # seconds.

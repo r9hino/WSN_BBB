@@ -20,11 +20,11 @@ table.reference th{
 	font-size:          95%;
 }
 
-#th1{
-    width: 25%;
+#th-source{
+    width: 94px;
 }
-#th3{
-    width: 25%;
+#th-16BitAddr{
+    width: 80px;
 }
 
 table.reference tr:nth-child(even){

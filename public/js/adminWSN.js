@@ -10,7 +10,7 @@ $(document).on("pagecreate", function(){
     var $connectionStatus = $('#connectionStatus');
 
     // Global variables.
-    var guiActiveTime = 3*60*1000;  // Miliseconds.
+    var guiActiveTime = 10*1*1000;  // Miliseconds.
 
     var socket = io.connect('pipobbb.mooo.com:8888',{
         rememberUpgrade: true,
@@ -26,24 +26,59 @@ $(document).on("pagecreate", function(){
 
         // Enable graphical user interface GUI.
         enableGUI();
+        
+        // Emit req for xbee WSN info data.
+        // Retrieve Xbees/Nodes network info (routes, addresses, devices down) and create a table.
+        socket.emit('reqXbeeWSNInfo');
+        socket.on('respXbeeWSNInfo', function(jsonXbeeWSNInfo){
+            $xbeeWSNInfoPanel.empty();  // Empty the div.
+            // All table html code is implemented in javascript to avoid problem with table 
+            // responsiveness (columntoggle). Problem when mixing static html parts and dynamic added parts.
+            var tableString = '';
+            tableString += '<table data-role="table" data-column-btn-text="Columns to display" data-mode="columntoggle" class="reference ui-responsive ui-shadow table-stroke" id="adminTable">';
+                tableString += '<thead><tr>';
+                tableString += '<th id="th-source">Xbee Source</th>';
+                tableString += '<th id="th-routes" data-priority="1">Routes</th>';
+                tableString += '<th id="th-16BitAddr" data-priority="2">16bit Addr</th>';
+                tableString += '<th id="th64BitAddr" data-priority="3">32bit Addr</th>';
+                tableString += '</tr></thead>';
+            tableString += '<tbody id="tbody-admin">';
+                        
+            for (var xbeeKey in jsonXbeeWSNInfo.networkRoutes) {
+                var route = jsonXbeeWSNInfo.networkRoutes[xbeeKey].join(' > ');
+                var addr16 = jsonXbeeWSNInfo.addrXbee16[xbeeKey];
+                var addr64 = jsonXbeeWSNInfo.addrXbee64[xbeeKey].slice(8);  // Only the LSB.
+                tableString += '<tr>';
+                tableString += '<td>'+xbeeKey+'</td>';
+                tableString += '<td>'+route+' > c'+'</td>';
+                tableString += '<td>'+'0x'+addr16+'</td>';
+                tableString += '<td>'+'0x'+addr64+'</td>';
+                tableString += '</tr>';
+            }
+            tableString += '</tbody>';
+            tableString += '</table>';
+            $xbeeWSNInfoPanel.append(tableString);
+            $("#adminTable-popup-popup").remove();
+            //$('#adminTable').table();
+            $xbeeWSNInfoPanel.trigger('create');
+            //$xbeeWSNInfoPanel.html(tableString).enhanceWithin();
+        });
     });
 
     // Display input buttons for command request.
-    // System state is received only one time.
-    socket.once('jsonSystemState', createCmdReqPanel);
-    function createCmdReqPanel(jsonServerData){ 
+    // Panel need xbeeKey to generate the options for the input select.
+    socket.once('respXbeeWSNInfo', createCmdReqPanel);
+    function createCmdReqPanel(jsonXbeeWSNInfo){ 
         $cmdReqPanel.empty();  // Empty the div.
 
 		// Create xbee remote AT command request gui form.
         var optionSelectString = '';
-        // First option in the select input is broadcast the command to all xbees.
+        // First option in the select input is broadcast.
         optionSelectString += '<option value="broadcast">broadcast</option>';
         optionSelectString += '<option value="coordinator">coordinator</option>';
-        for (var devId in jsonServerData) {
-            if (jsonServerData[devId].type === 'xbee'){
-                var xbeeId = jsonServerData[devId].xbee;
-                optionSelectString += '<option value="' + xbeeId + '">' + xbeeId + '</option>';
-            }
+        // Retrieve xbee key (xb1, xb2, ...) and put them as select options.
+        for(var xbeeKey in jsonXbeeWSNInfo.addrXbee16){
+            optionSelectString += '<option value="' + xbeeKey + '">' + xbeeKey + '</option>';
         }
         // Add inputs to the web.
 		$cmdReqPanel.append(
@@ -71,76 +106,38 @@ $(document).on("pagecreate", function(){
         var xbeeCmdObj = {'xbeeId': xbeeIdReq, 'xbeeCmd': xbeeCmdReq, 'xbeeParam': xbeeParamReq};
         socket.emit('clientXbeeCmdReq', xbeeCmdObj);  // Now client must wait for command response.
     });
-
-
-    // Retrieve Xbees/Nodes network info (routes, addresses, devices down) and crate a table.
-    socket.once('jsonXbeeWSNInfo', function(jsonXbeeWSNInfo){
-        // All table html code is implemented in javascript to avoid problem with table 
-        // responsiveness (columntoggle). Problem when mixing static html parts and dynamic added parts.
-        var tableString = '';
-        tableString += '<table data-role="table" data-column-btn-text="Columns to display" data-mode="columntoggle" class="reference ui-responsive ui-shadow table-stroke" id="adminTable">';
-            tableString += '<thead><tr>';
-            tableString += '<th id="th1">Xbee Source</th>';
-            tableString += '<th id="th2" data-priority="1">Routes</th>';
-            tableString += '<th id="th3" data-priority="2">16bit Addr</th>';
-            tableString += '<th id="th4" data-priority="3">32bit Addr</th>';
-            tableString += '</tr></thead>';
-        tableString += '<tbody id="tbody-admin">';
-                    
-        for (var xbeeKey in jsonXbeeWSNInfo.networkRoutes) {
-            var route = jsonXbeeWSNInfo.networkRoutes[xbeeKey].toString();
-            var addr16 = jsonXbeeWSNInfo.addrXbee16[xbeeKey];
-            var addr64 = jsonXbeeWSNInfo.addrXbee64[xbeeKey].slice(8);  // Only the LSB.
-            tableString += '<tr>';
-            tableString += '<td>'+xbeeKey+'</td>';
-            tableString += '<td>'+route+'</td>';
-            tableString += '<td>'+'0x'+addr16+'</td>';
-            tableString += '<td>'+'0x'+addr64+'</td>';
-            tableString += '</tr>';
-        }
-        tableString += '</tbody>';
-        tableString += '</table>';
-        $xbeeWSNInfoPanel.append(tableString);
-        //$("#adminTable-popup-popup").remove();
-        //$('#adminTable').table();
-        $xbeeWSNInfoPanel.trigger('create');
-        //$xbeeWSNInfoPanel.html(tableString).enhanceWithin();
+    // Clear input text for command and command parameter when clicking command input.
+    $cmdReqPanel.on('click', '#text-xbee-cmd', function(){
+        $(this).val('');
+        $cmdReqPanel.find('#text-xbee-param').val('');
+    });
+    $cmdReqPanel.on('click', '#text-xbee-param', function(){
+        $(this).val('');
     });
 
     // Update connection status.
-    // Reasons: 'ping timeout', 'forced close', 'transport close'
-    socket.on('disconnect', function(reason){
-        $connectionStatus.text('Offline ' + reason);
-		$connectionStatus.css('color', 'red');
-    });
-    // Update connection status.
-    socket.on('reconnect', function(){
-        $connectionStatus.text('Reconnecting');
-		$connectionStatus.css('color', '#2356e1');
-    });
-
     $(window).on('click', function(){
         // If admin panel is disabled, clicking in grayed background return connection to server.
         if($adminPanel.hasClass('ui-state-disabled')){
-            socket.io.skipReconnect = false;
-            socket.io.reconnect();
+            $connectionStatus.text('Reconnecting');
+		    $connectionStatus.css('color', '#2356e1');
+		    socket.io.connect();
         }
         // If control panel is available, then each click reset setTimeout's timer.
         // I.E. disconnection will occur # seconds after last click.
         else{
             clearTimeout(timerTimeout);
             timerTimeout = null;
-            // Disconnect from server after 'guiActiveTime' seconds. Reconnection occurs when user clicks on grayed background.        
+            // Reset disconnection time 'guiActiveTime' seconds.
             timerTimeout = setTimeout(disconnectOnTimeout, guiActiveTime);
         }
     });
-    //$(window).on('blur', windowBlur);
-    $(window).on('focus', windowFocus);
     
     //$(window).blur(windowBlur);  // No se activa al cambiar de pagina internamente
     //$(window).focus(windowFocus);
 
     // Phone Chrome doesn't detect .blur() events, others browsers do. Waiting for some patches.
+    //$(window).on('blur', windowBlur);
     function windowBlur(){
         // Clear timer to avoid another disconnection on timeout.
         clearTimeout(timerTimeout);
@@ -151,11 +148,13 @@ $(document).on("pagecreate", function(){
         $adminPanel.addClass('ui-state-disabled');
     }
     
+    $(window).on('focus', windowFocus);
     function windowFocus(){
         // If control panel is disabled, focus will try to reconnect.
         if ($adminPanel.hasClass('ui-state-disabled')){
-            socket.io.skipReconnect = false;
-            socket.io.reconnect();
+            $connectionStatus.text('Reconnecting');
+		    $connectionStatus.css('color', '#2356e1');
+            socket.io.connect();
         }
     }
     
@@ -170,7 +169,12 @@ $(document).on("pagecreate", function(){
         timerTimeout = null;
         timerTimeout = setTimeout(disconnectOnTimeout, guiActiveTime);
     }
-    
+
+    socket.on('disconnect', function(reason){
+        $connectionStatus.text('Offline ' + reason);
+		$connectionStatus.css('color', 'red');
+    });
+
     function disconnectOnTimeout(){
         // Close connection after # seconds.
         socket.io.disconnect();
