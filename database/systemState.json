@@ -6,14 +6,14 @@
         "name": "Lampara Pipo",
         "switchValue": 1,
         "autoMode": 0,
-        "autoTime": "13:29"
+        "autoTime": "15:29"
     },
     "dev1": {
         "id": "dev1",
         "type": "pin",
         "pin": "P8_12",
         "name": "Calentador Pipo",
-        "switchValue": 1,
+        "switchValue": 0,
         "autoMode": 0,
         "autoTime": ""
     },

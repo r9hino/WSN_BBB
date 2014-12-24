@@ -10,7 +10,7 @@ table.reference{
 }
 
 table.reference th{
-    border:             2px solid #cccccc;
+    border:             2px solid #dddddd;
     background-color:   #cccccc;
 	color:              #333333;
 	padding-top:        3px;
@@ -20,8 +20,11 @@ table.reference th{
 	font-size:          95%;
 }
 
-#th-source{
-    width: 94px;
+#th-nodes{
+    width: 60px;
+}
+#th-status{
+    width: 60px;
 }
 #th-16BitAddr{
     width: 80px;

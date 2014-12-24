@@ -91,7 +91,8 @@ async.series([
             else{
                 console.log('Node Discovery Complete.'); // All node have been discovered.
             }
-            // Main listener for xbee rx frames.
+
+            // Set main listener for xbee rx frames.
             xbeeAPI.on("frame_object", xbeeFrameListener);
             console.log("Enable main listener for xbee's received frames.");
             callback(null);
@@ -102,11 +103,12 @@ async.series([
         callback(null);
     },
     function(callback){
-        server = app.listen(8888, function(error){
+        var serverPort = 8888;
+        server = app.listen(serverPort, function(error){
             if(error) return callback(error);
-            console.log('Server listening on port 8888.');
+            console.log('Server listening on port ' + serverPort + '.');
             callback(null);
-        }); 
+        });
     },
     function(callback){
         io = require('socket.io')(server, {
@@ -159,22 +161,26 @@ function socketConnection(socket){
         console.log(dateTime() + '  IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
-    // Send jsonSystemState data (BBB pins and xbees) to client at the beginning of connection.
-    socket.emit('jsonSystemState', jsonSystemState);
+    // Control WSN page: client request for system state.
+    socket.on('reqSystemState', function(){
+        // Send jsonSystemState data (BBB pins and xbees) to client at the beginning of connection.
+        socket.emit('respSystemState', jsonSystemState); 
+    });
     
     // Admin page: client request for xbee WSN info.
     socket.on('reqXbeeWSNInfo', function(){
         // Send Xbees/Nodes network states (routes, addresses, devices down) to client admin web page.
         // Unfortunately, it will be also sended to clientWSN web page.
         var jsonXbeeWSNInfo = {
-            "addrXbee64": xbee.getAddrXbee64(), 
-            "addrXbee16": xbee.getAddrXbee16(), 
-            "networkRoutes": xbee.getNetworkRoutes()
+            "xbeeAddr64": xbee.getXbeeAddr64(), 
+            "xbeeAddr16": xbee.getXbeeAddr16(), 
+            "networkRoutes": xbee.getNetworkRoutes(),
+            "nodesDiscovered": xbee.getNodesDiscovered()
         };
         socket.emit('respXbeeWSNInfo', jsonXbeeWSNInfo);
     });
     
-    // Listen for client xbee remote AT command request.
+    // Admin page: listen for client xbee remote AT command request.
     socket.on('clientXbeeCmdReq', clientXbeeCmdreqHandler);     // End socket.on('xbeeClientCmdReq', function(xbeeCmdObj){}).
     function clientXbeeCmdreqHandler(xbeeCmdObj){
         var xbeeId = xbeeCmdObj.xbeeId;     // Requested xbee id from client (broadcast, xbee1, xbee2...). 
@@ -191,7 +197,7 @@ function socketConnection(socket){
     }
     
     
-    // Listen for changes made by user on browser/client side. Then update system state.
+    // ControlWSN page: listen for changes made by user on browser/client side. Then update system state.
     // Update system state based on clientData values sended by client's browsers.
     // clientData format is: {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime}
     socket.on('elementChanged', updateSystemState);
@@ -263,22 +269,35 @@ function socketConnection(socket){
 }           // End function socketConnection().
 
 
-// Xbee frame listener. The frame type determine which function is called.
+// Callback function executed after each xbee function listener return. If any internal info from the xbee WSN 
+// changed, it will emit an event with a node summary data to the admin client page.
+function listenerCallback(nodeInfoChanged, nodeSummary){
+    if(nodeInfoChanged){
+        // Send data to clients only if some node info has changed.
+        io.sockets.emit('xbeeInfoChanged', nodeSummary);
+    }
+}
+// Xbee frame listeners. The frame type determine which function is called.
 //xbeeAPI.on("frame_object", xbeeFrameListener);
 function xbeeFrameListener(frame){
     switch(frame.type){
         // AT Command Response.
         case 0x88: xbee.ATCmdResponse(frame); break;
         // ZigBee Transmit Status acknowledgement for the ZigBee Transmit Request.
-        case 0x8B: xbee.ZBTransmitStatus(frame); break;
+        case 0x8B: 
+            xbee.ZBTransmitStatus(frame, listenerCallback); break;
         // ZigBee Receive Packet handler for a remote ZigBee Transmit Request.
-        case 0x90: xbee.ZBReceivePacket(frame); break;
+        case 0x90: 
+            xbee.ZBReceivePacket(frame, listenerCallback); break;
         // ZigBee IO Data Sample Rx Indicator.
-        case 0x92: xbee.ZBIODataSampleRx(frame); break;
+        case 0x92: 
+            xbee.ZBIODataSampleRx(frame, listenerCallback); break;
         // After a Remote AT Cmd Request, module respond with a Remote AT Cmd Response.
-        case 0x97: xbee.remoteCmdResponse(frame); break;
+        case 0x97: 
+            xbee.remoteCmdResponse(frame, listenerCallback); break;
         // After a Many-to-One request, a Route Record Indicator will be received for each module.
-        case 0xA1: xbee.routeRecordIndicator(frame); break;
+        case 0xA1: 
+            xbee.routeRecordIndicator(frame, listenerCallback); break;
         default:
             console.log("Not defined frame type: 0x" + frame.type.toString(16).toUpperCase());
             console.log(frame); break;

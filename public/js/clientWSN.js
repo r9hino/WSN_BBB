@@ -26,14 +26,15 @@ $(document).on("pagecreate", function(){
         enableGUI();
         
         // Update system state.
-        socket.on('jsonSystemState', function(jsonServerData){
+        socket.emit('reqSystemState');
+        socket.on('respSystemState', function(jsonSystemState){
             $controlPanel.empty();  // Empty the div.
     
-            for(var devId in jsonServerData){
-    		    var name = jsonServerData[devId].name;
-    		    var switchValue = jsonServerData[devId].switchValue;
-    		    var autoMode = jsonServerData[devId].autoMode;
-    		    var autoTime = jsonServerData[devId].autoTime;
+            for(var devId in jsonSystemState){
+    		    var name = jsonSystemState[devId].name;
+    		    var switchValue = jsonSystemState[devId].switchValue;
+    		    var autoMode = jsonSystemState[devId].autoMode;
+    		    var autoTime = jsonSystemState[devId].autoTime;
     
     		    // Create buttons based on the system state.
     		    $controlPanel.append(
@@ -59,7 +60,7 @@ $(document).on("pagecreate", function(){
         Use .on() method when working with dynamically created buttons.
         Handles clicks/changes events and send new states to the server.*/
     $controlPanel.on('change', '.dynamic', changeHandler);
-    function changeHandler (e) {
+    function changeHandler(e){
         // "this" correspond to the input checkbox clicked/changed.
         var devId = $(this).prop('name');    // Retrieve device Id.
         var switchValue = $('#'+devId+'switch').prop('checked') ? 1 : 0;  // If switch is on set switchValue to 1.
