@@ -91,7 +91,6 @@ async.series([
             else{
                 console.log('Node Discovery Complete.'); // All node have been discovered.
             }
-
             // Set main listener for xbee rx frames.
             xbeeAPI.on("frame_object", xbeeFrameListener);
             console.log("Enable main listener for xbee's received frames.");
@@ -311,7 +310,10 @@ function writeThingSpeak(){
     var fieldsUpdate = {
         field1: (xbee.sensorData['xb1'].tempAccum/xbee.sensorData['xb1'].sampleNum).toFixed(2),
         field2: (xbee.sensorData['xb2'].tempAccum/xbee.sensorData['xb2'].sampleNum).toFixed(2),
-        field3: xbee.sensorData['xb3'].t
+        field3: xbee.sensorData['xb3'].t,
+        field4: xbee.sensorData['xb3'].p,
+        field5: xbee.sensorData['xb3'].h,
+        field6: xbee.sensorData['xb3'].l
     };
     //console.log(fieldsUpdate);
     thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp){
