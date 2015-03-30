@@ -23,17 +23,20 @@
 
 // Application modules
 var fs = require('graceful-fs');    // Handle file system read/write.
-var async = require("async");
+var async = require('async');
 var Q = require('q');
 var bbb = require('bonescript');
+//var cronJob = require('cron').CronJob;
+//var cronTime = require('cron').CronTime;
 var cronJob = require('/var/lib/cloud9/WSN/custom_modules/cron').CronJob;
 var cronTime = require('/var/lib/cloud9/WSN/custom_modules/cron').CronTime;
 var SerialPort = require('serialport').SerialPort;
 var xbee_api = require('/var/lib/cloud9/WSN/custom_modules/xbee-api');
+//var xbee_api = require('xbee-api');
 var ThingSpeakClient = require('thingspeakclient');
 
 // Date instance for logging date and time.
-var dateTime = require('./lib/dateTime');
+var timelib = require('./lib/timelib');
 
 // Xbee RX and TX functions.
 var xbeeWSN = require('./lib/xbeeWSN');
@@ -140,7 +143,7 @@ function jobAutoOn(devId){
     if(jsonSystemState[devId].type === 'pin')  bbb.digitalWrite(jsonSystemState[devId].pin, 1);
     else if(jsonSystemState[devId].type === 'xbee') xbee.remoteATCmdReq(jsonSystemState[devId].xbee, null, 'D4', C.PIN_MODE.D4.DIGITAL_OUTPUT_HIGH);
     
-    console.log(dateTime() + '  Automatic on: ' + jsonSystemState[devId].name);
+    console.log(timelib.timeNow() + '  Automatic on: ' + jsonSystemState[devId].name);
     io.sockets.emit('updateClients', jsonSystemState[devId]);
     // Store new values into json file systemState.json
     fs.writeFile(jsonFileName, JSON.stringify(jsonSystemState, null, 4), function(err){
@@ -154,10 +157,10 @@ function jobAutoOn(devId){
 // Listen to changes made from the clients control panel.
 function socketConnection(socket){
     var connectIP = socket.client.conn.remoteAddress;
-    console.log(dateTime() + '  IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
+    console.log(timelib.timeNow() + '  IP ' + connectIP + ' connected. Clients count: ' + io.eio.clientsCount);
     socket.on('disconnect', function(){
         var disconnectIP = socket.client.conn.remoteAddress;
-        console.log(dateTime() + '  IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
+        console.log(timelib.timeNow() + '  IP ' + disconnectIP + ' disconnected. Clients count: ' + io.eio.clientsCount);
     });
     
     // Control WSN page: client request for system state.
@@ -229,7 +232,7 @@ function socketConnection(socket){
             }
         }        
 
-        console.log(dateTime() + "  Name: " + data.name + 
+        console.log(timelib.timeNow() + "  Name: " + data.name + 
                     ",  Switch value: " + data.switchValue +
                     ",  AutoMode value: " + data.autoMode +
                     ",  AutoTime value: " + data.autoTime + ",  Pin: " + data.pin);
@@ -253,9 +256,11 @@ function socketConnection(socket){
             // Set new scheduler values.
             var myCronTime = new cronTime('0 ' + minuteStr + ' ' + hourStr + ' * * *', null);
             schedulerJob[devId].setTime(myCronTime);
+            // .setCallback is a custom function added by me to the cron lib.
             schedulerJob[devId].setCallback(jobAutoOn.bind(this, devId));   // Set job/function to be execute on cron tick.
             schedulerJob[devId].start();
-            console.log("Set Auto On to: " + schedulerJob[devId].nextDate() + "  " + data.name);
+            console.log("Set Auto On to: " + data.autoTime + ":00" + "  " + data.name);
+            //console.log("Set Auto On to: " + schedulerJob[devId].nextDate() + "  " + data.name);
         }
         else if(schedulerJob[devId] instanceof cronJob) schedulerJob[devId].stop();
 
@@ -268,8 +273,8 @@ function socketConnection(socket){
 }           // End function socketConnection().
 
 
-// Callback function executed after each xbee function listener return. If any internal info from the xbee WSN 
-// changed, it will emit an event with a node summary data to the admin client page.
+// Callback function executed after each xbee function listener return. If any internal info from the xbee
+// WSN changed, it will emit an event with a node summary data to the admin client page.
 function listenerCallback(nodeInfoChanged, nodeSummary){
     if(nodeInfoChanged){
         // Send data to clients only if some node info has changed.

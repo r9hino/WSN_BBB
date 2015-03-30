@@ -48,6 +48,13 @@ var routes = require('./routes')(passport);
 app.use('/', routes);
 
 
+app.use(errorHandler);
+
+function errorHandler(err, req, res, next) {
+  res.status(500);
+  res.render('error', { error: err });
+}
+
 // Catch 404 and forwarding to error handler.
 app.use(function(req, res, next) {
     var err = new Error('Not Found');

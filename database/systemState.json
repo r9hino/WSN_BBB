@@ -4,9 +4,9 @@
         "type": "pin",
         "pin": "P8_11",
         "name": "Lampara Pipo",
-        "switchValue": 1,
-        "autoMode": 0,
-        "autoTime": ""
+        "switchValue": 0,
+        "autoMode": 1,
+        "autoTime": "06:55"
     },
     "dev1": {
         "id": "dev1",

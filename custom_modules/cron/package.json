@@ -1,7 +1,7 @@
 {
   "name": "cron",
   "description": "Cron jobs for your node",
-  "version": "1.0.5",
+  "version": "1.0.9",
   "author": {
     "name": "Nick Campbell",
     "email": "nicholas.j.campbell@gmail.com",
@@ -18,9 +18,12 @@
   "scripts": {
     "test": "make test"
   },
+  "dependencies": {
+    "moment-timezone": "~0.3.0"
+  },
   "devDependencies": {
     "nodeunit": ">=0.5.4",
-    "time": "0.8.0"
+    "sinon": "~1.12.x"
   },
   "licenses": [
     {
@@ -77,14 +80,20 @@
       "name": "Leandro Ferrari",
       "email": "lfthomaz@gmail.com",
       "url": "https://github.com/lfthomaz"
+    },
+    {
+      "name": "Gregg Zigler",
+      "email": "greggzigler@gmail.com",
+      "url": "https://github.com/greggzigler"
     }
   ],
-  "gitHead": "b3e6891ab3867fc14654d6f0f68827daf8457439",
+  "gitHead": "487ccab8583322395028abe854e7d6d1f8ed7387",
   "homepage": "https://github.com/ncb000gt/node-cron",
-  "_id": "cron@1.0.5",
-  "_shasum": "9127e2edb831afe867be79388f438d483f924f0e",
+  "_id": "cron@1.0.9",
+  "_shasum": "5177cf751f3263f00f45ebf69fead1ea96d31cfc",
   "_from": "cron@",
-  "_npmVersion": "1.4.14",
+  "_npmVersion": "2.3.0",
+  "_nodeVersion": "1.0.4",
   "_npmUser": {
     "name": "ncb000gt",
     "email": "nicholas.j.campbell@gmail.com"
@@ -96,9 +105,10 @@
     }
   ],
   "dist": {
-    "shasum": "9127e2edb831afe867be79388f438d483f924f0e",
-    "tarball": "http://registry.npmjs.org/cron/-/cron-1.0.5.tgz"
+    "shasum": "5177cf751f3263f00f45ebf69fead1ea96d31cfc",
+    "tarball": "http://registry.npmjs.org/cron/-/cron-1.0.9.tgz"
   },
   "directories": {},
-  "_resolved": "https://registry.npmjs.org/cron/-/cron-1.0.5.tgz"
+  "_resolved": "https://registry.npmjs.org/cron/-/cron-1.0.9.tgz",
+  "readme": "ERROR: No README data found!"
 }
