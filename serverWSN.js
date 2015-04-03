@@ -34,6 +34,7 @@ var SerialPort = require('serialport').SerialPort;
 var xbee_api = require('/var/lib/cloud9/WSN/custom_modules/xbee-api');
 //var xbee_api = require('xbee-api');
 var ThingSpeakClient = require('thingspeakclient');
+var sysUsage = require('usage');
 
 // Date instance for logging date and time.
 var timelib = require('./lib/timelib');
@@ -53,7 +54,11 @@ var jsonSystemState = loadSystemState();    // Load to memory system's state fro
 var thingspeak = new ThingSpeakClient();
 thingspeak.attachChannel(11818, {writeKey:'1EQD8TANGANJHA3J'}, function(error){
     if(error)   return console.log('ThingSpeak client ' + error);
-    console.log('Thingspeak client ready.');
+    console.log('Thingspeak BBB WSN channel ready.');
+});
+thingspeak.attachChannel(32544, {writeKey:'QSGVTNFA0SCP4TP7'}, function(error){
+    if(error)   return console.log('ThingSpeak client ' + error);
+    console.log('Thingspeak BBB Linux Stats channel ready.');
 });
 
 //******************************************************************************
@@ -183,8 +188,9 @@ function socketConnection(socket){
     });
     
     // Admin page: listen for client xbee remote AT command request.
-    socket.on('clientXbeeCmdReq', clientXbeeCmdreqHandler);     // End socket.on('xbeeClientCmdReq', function(xbeeCmdObj){}).
-    function clientXbeeCmdreqHandler(xbeeCmdObj){
+    socket.on('clientXbeeCmdReq', clientXbeeCmdReqHandler);     // End socket.on('xbeeClientCmdReq', function(xbeeCmdObj){}).
+    // xbeeCmdObj format is: {'xbeeId': xbeeIdReq, 'xbeeCmd': xbeeCmdReq, 'xbeeParam': xbeeParamReq}
+    function clientXbeeCmdReqHandler(xbeeCmdObj){
         var xbeeId = xbeeCmdObj.xbeeId;     // Requested xbee id from client (broadcast, xbee1, xbee2...). 
         var xbeeCmd = xbeeCmdObj.xbeeCmd;   // Requested xbee cmd from client.
         var xbeeParam = xbeeCmdObj.xbeeParam;
@@ -200,9 +206,9 @@ function socketConnection(socket){
     
     
     // ControlWSN page: listen for changes made by user on browser/client side. Then update system state.
-    // Update system state based on clientData values sended by client's browsers.
-    // clientData format is: {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime}
+    // Update system state based on clientData values sended by client's browser.
     socket.on('elementChanged', updateSystemState);
+    // clientData format is: {'id':devId, 'switchValue':switchValue, 'autoMode':autoMode, 'autoTime':autoTime}
     function updateSystemState(clientData){
         var devId = clientData.id;
         // Store received data in JSON object.
@@ -221,6 +227,7 @@ function socketConnection(socket){
                 // Only for testing purpose MCU+Xbee
                 if(data.xbee === 'xb3'){    //'123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J'
                     xbee.ZBTransmitRequest(data.xbee, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+                    console.log(process.memoryUsage());
                 }
             }
             else{
@@ -243,10 +250,9 @@ function socketConnection(socket){
         //socket.broadcast.emit('updateClients', data);
 
 
-        // Start scheduler only if autoMode is 1 and device is off.
-        // Pointless to start scheduler if device is already on.
+        // Start scheduler only if autoMode is 1 (true) and switch value is set to zero (off).
         // Check that autoTime is not an empty string or undefined, otherwise server will stop working.
-        if((data.switchValue === 0) && (data.autoMode === 1) && (data.autoTime !== "")){
+        if((data.switchValue === 0) && (data.autoMode === 1) && (data.autoTime !== "") && (data.autoTime !== undefined) && (data.autoTime !== null)){
             // Retrieve hours and minutes from client received data.
             var autoTimeSplit = data.autoTime.split(":");
             // First convert to integer: "02" -> 2. Then convert to string again: 2 -> "2".
@@ -277,7 +283,7 @@ function socketConnection(socket){
 // WSN changed, it will emit an event with a node summary data to the admin client page.
 function listenerCallback(nodeInfoChanged, nodeSummary){
     if(nodeInfoChanged){
-        // Send data to clients only if some node info has changed.
+        // Send data to admin client page only if some node info has changed.
         io.sockets.emit('xbeeInfoChanged', nodeSummary);
     }
 }
@@ -308,9 +314,10 @@ function xbeeFrameListener(frame){
     }
 }
 
+
 // Update ThingSpeak database each 5 minutes.
-setInterval(writeThingSpeak, 5*60*1000);
-function writeThingSpeak(){
+setInterval(writeThingSpeakBBBWSN, 5*60*1000);
+function writeThingSpeakBBBWSN(){
     // Create object with temperature averages.
     var fieldsUpdate = {
         field1: (xbee.sensorData['xb1'].tempAccum/xbee.sensorData['xb1'].sampleNum).toFixed(2),
@@ -323,14 +330,36 @@ function writeThingSpeak(){
     //console.log(fieldsUpdate);
     thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp){
         if(err || resp <= 0){
-            return console.log('An error ocurred while updating ThingSpeak.');
+            return console.log('An error ocurred while updating ThingSpeak BBB WSN Channel.');
         }
         //else console.log('Update successfully. Entry number was: ' + resp);
     });
-    
+
     // Restore sensorData object for new measurements.
     for(var xbeeKey in xbee.sensorDataAccum){
         xbee.sensorData[xbeeKey].tempAccum = 0;
         xbee.sensorData[xbeeKey].sampleNum = 0;
     }
 }
+
+// Update ThingSpeak database each 20 seconds.
+setInterval(writeThingSpeakBBBLinuxStats, 20*1000);
+function writeThingSpeakBBBLinuxStats(){
+    var pid = process.pid;
+    var processMem = process.memoryUsage();
+
+    sysUsage.lookup(pid, function(err, result){
+        if(err) return console.log('Error retrieving system stats. ' + err);
+
+        var fieldsUpdate = {
+            field1: result.cpu,
+            field2: result.memoryInfo.rss/500000000*100,    // 500 mb RAM.
+            field3: processMem.heapUsed/processMem.heapTotal*100
+        };
+        thingspeak.updateChannel(32544, fieldsUpdate, function(err, resp){
+            if(err || resp <= 0) return console.log('An error ocurred while updating ThingSpeak BBB Linux Stats Channel.');
+        //else console.log('Update successfully. Entry number was: ' + resp);
+        });      
+    });
+}
+

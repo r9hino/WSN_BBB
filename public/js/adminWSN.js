@@ -77,7 +77,6 @@ $(document).on("pagecreate", function(){
             $('#adminTable').find('#tr-'+xbeeKey).find('.td-status').html('<b>'+status+'</b>');
             if(status === 'Up') $('#adminTable').find('#tr-'+xbeeKey).find('.td-status').css('color', 'green');
             else $('#adminTable').find('#tr-'+xbeeKey).find('.td-status').css('color', 'red');
-            
         }
         if(nodeSummary.xbeeAddr16 !== '' && nodeSummary.xbeeAddr16 !== undefined && nodeSummary.xbeeAddr16 !== null){
             var xbeeAddr16 = '0x'+nodeSummary.xbeeAddr16;
