@@ -81,8 +81,7 @@ function loadSystemState(){
         }
         // Any other error.
         else{
-            console.log("Error reading/loading JSON file.");
-            console.log(e.code);
+            console.error("Error reading/loading JSON file - " + e.code);
             throw e;
         }
     }

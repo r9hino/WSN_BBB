@@ -53,11 +53,11 @@ var jsonSystemState = loadSystemState();    // Load to memory system's state fro
 // ThingSpeak initialization.
 var thingspeak = new ThingSpeakClient();
 thingspeak.attachChannel(11818, {writeKey:'1EQD8TANGANJHA3J'}, function(error){
-    if(error)   return console.log('ThingSpeak client ' + error);
+    if(error)   return console.error('Thingspeak BBB WSN ' + error);
     console.log('Thingspeak BBB WSN channel ready.');
 });
 thingspeak.attachChannel(32544, {writeKey:'QSGVTNFA0SCP4TP7'}, function(error){
-    if(error)   return console.log('ThingSpeak client ' + error);
+    if(error)   return console.error('ThingSpeak BBB Linux Stats ' + error);
     console.log('Thingspeak BBB Linux Stats channel ready.');
 });
 
@@ -93,7 +93,7 @@ async.series([
     function(callback){ 
         xbee.WSNNodeDiscovery(function(error){
             if(error){
-                console.log(error);
+                console.error(error);
                 console.log('Nodes not discovered are: ' + xbee.searchNodesNotDiscovered());
             }
             else{
@@ -128,7 +128,7 @@ async.series([
         callback(null);
     }],
     function(err){ //This function gets called after all tasks has called its callback functions.
-        if(err) return console.log(err);
+        if(err) return console.error(err);
         console.log('System initialization using async series is complete.');
     }
 );
@@ -152,7 +152,7 @@ function jobAutoOn(devId){
     io.sockets.emit('updateClients', jsonSystemState[devId]);
     // Store new values into json file systemState.json
     fs.writeFile(jsonFileName, JSON.stringify(jsonSystemState, null, 4), function(err){
-        if(err) return console.log(err);
+        if(err) return console.error(err);
     });
 }
 
@@ -227,7 +227,7 @@ function socketConnection(socket){
                 // Only for testing purpose MCU+Xbee
                 if(data.xbee === 'xb3'){    //'123456789A123456789B123456789C123456789D123456789E123456789F123456789G123456789H123456789I123456789J'
                     xbee.ZBTransmitRequest(data.xbee, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-                    console.log(process.memoryUsage());
+                    //console.log(process.memoryUsage());
                 }
             }
             else{
@@ -316,7 +316,7 @@ function xbeeFrameListener(frame){
 
 
 // Update ThingSpeak database each 5 minutes.
-setInterval(writeThingSpeakBBBWSN, 5*60*1000);
+setInterval(writeThingSpeakBBBWSN, 30*1000);
 function writeThingSpeakBBBWSN(){
     // Create object with temperature averages.
     var fieldsUpdate = {
@@ -330,7 +330,7 @@ function writeThingSpeakBBBWSN(){
     //console.log(fieldsUpdate);
     thingspeak.updateChannel(11818, fieldsUpdate, function(err, resp){
         if(err || resp <= 0){
-            return console.log('An error ocurred while updating ThingSpeak BBB WSN Channel.');
+            return console.error('An error ocurred while updating ThingSpeak BBB WSN Channel.');
         }
         //else console.log('Update successfully. Entry number was: ' + resp);
     });
@@ -343,13 +343,13 @@ function writeThingSpeakBBBWSN(){
 }
 
 // Update ThingSpeak database each 20 seconds.
-setInterval(writeThingSpeakBBBLinuxStats, 20*1000);
+setInterval(writeThingSpeakBBBLinuxStats, 5*60*1000);
 function writeThingSpeakBBBLinuxStats(){
     var pid = process.pid;
     var processMem = process.memoryUsage();
 
     sysUsage.lookup(pid, function(err, result){
-        if(err) return console.log('Error retrieving system stats. ' + err);
+        if(err) return console.error('Error retrieving system stats. ' + err);
 
         var fieldsUpdate = {
             field1: result.cpu,
@@ -357,7 +357,7 @@ function writeThingSpeakBBBLinuxStats(){
             field3: processMem.heapUsed/processMem.heapTotal*100
         };
         thingspeak.updateChannel(32544, fieldsUpdate, function(err, resp){
-            if(err || resp <= 0) return console.log('An error ocurred while updating ThingSpeak BBB Linux Stats Channel.');
+            if(err || resp <= 0) return console.error('An error ocurred while updating ThingSpeak BBB Linux Stats Channel.');
         //else console.log('Update successfully. Entry number was: ' + resp);
         });      
     });
