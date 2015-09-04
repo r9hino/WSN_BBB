@@ -6,6 +6,7 @@
 
     To execute serverWSN.js as a deamon (bg process + logging) use:
     sudo nohup node serverWSN.js &>> server.log &
+    FOREVER_ROOT=/var/lib/cloud9/WSN/.forever forever start -a -l /var/lib/cloud9/WSN/.forever/server.log /var/lib/cloud9/WSN/serverWSN.js
 
     Links:
     Express, routes, app example: https://github.com/cwbuecheler/node-tutorial-2-restful-app
@@ -24,7 +25,7 @@
 // Application modules
 var fs = require('graceful-fs');    // Handle file system read/write.
 var async = require('async');
-var Q = require('q');
+//var Q = require('q');
 var bbb = require('bonescript');
 //var cronJob = require('cron').CronJob;
 //var cronTime = require('cron').CronTime;
