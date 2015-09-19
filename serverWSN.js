@@ -25,14 +25,13 @@
 // Application modules
 var fs = require('graceful-fs');    // Handle file system read/write.
 var async = require('async');
-//var Q = require('q');
 var bbb = require('bonescript');
 //var cronJob = require('cron').CronJob;
 //var cronTime = require('cron').CronTime;
-var cronJob = require('/var/lib/cloud9/WSN_BBB/custom_modules/cron').CronJob;
-var cronTime = require('/var/lib/cloud9/WSN_BBB/custom_modules/cron').CronTime;
+var cronJob = require(__dirname + '/custom_modules/cron').CronJob;
+var cronTime = require(__dirname + '/custom_modules/cron').CronTime;
 var SerialPort = require('serialport').SerialPort;
-var xbee_api = require('/var/lib/cloud9/WSN_BBB/custom_modules/xbee-api');
+var xbee_api = require(__dirname + '/custom_modules/xbee-api');
 //var xbee_api = require('xbee-api');
 var ThingSpeakClient = require('thingspeakclient');
 var sysUsage = require('usage');

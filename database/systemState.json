@@ -13,7 +13,7 @@
         "type": "pin",
         "pin": "P8_12",
         "name": "Calentador Pipo",
-        "switchValue": 1,
+        "switchValue": 0,
         "autoMode": 1,
         "autoTime": "06:30"
     },
