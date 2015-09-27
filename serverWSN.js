@@ -42,13 +42,13 @@ var timelib = require('./lib/timelib');
 // Xbee RX and TX functions.
 var xbeeWSN = require('./lib/xbeeWSN');
 
-// Allow to initialize devices to the preview system state.
+// Load function to allow initialize devices to the preview system state.
 var initDevices = require('./lib/initDevices');
 
 // Load preview system state.
-var jsonFileName = __dirname + "/database/systemState.json";
-var loadSystemState = require('./database/loadSystemState');
-var jsonSystemState = loadSystemState();    // Load to memory system's state from systemState.json file.
+var jsonFileName = __dirname + "/database/systemState.json"; // File name where is stored json system state.
+var loadSystemState = require('./database/loadSystemState'); // Load function to retrieve system state in a json format.
+var jsonSystemState = loadSystemState(jsonFileName);    // Load to memory system's state from systemState.json file.
 
 // ThingSpeak initialization.
 var thingspeak = new ThingSpeakClient();
@@ -280,7 +280,7 @@ function socketConnection(socket){
 
 
 // Callback function executed after each xbee function listener return. If any internal info from the xbee
-// WSN changed, it will emit an event with a node summary data to the admin client page.
+// WSN is changed, it will emit an event with a node summary data to the admin client page.
 function listenerCallback(nodeInfoChanged, nodeSummary){
     if(nodeInfoChanged){
         // Send data to admin client page only if some node info has changed.
